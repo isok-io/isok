@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 pub use std::net::IpAddr;
 use std::time::Duration;
 
+use chrono::NaiveDateTime;
 pub use http::uri::Authority;
 pub use http::uri::InvalidUri;
 pub use http::Uri as HttpUri;
@@ -266,6 +267,26 @@ pub enum CheckKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Check {
+    id: Uuid,
+    kind: CheckKind,
+    max_latency: Duration,
+    interval: Duration,
+    region: String,
+    created_at: NaiveDateTime,
+    updated_at: NaiveDateTime,
+    deleted_at: Option<NaiveDateTime>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckInput {
+    kind: CheckKind,
+    max_latency: Duration,
+    interval: Duration,
+    region: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckOutput {
     id: Uuid,
     kind: CheckKind,
     max_latency: Duration,

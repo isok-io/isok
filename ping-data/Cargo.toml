@@ -9,4 +9,5 @@ edition = "2021"
 serde = { version = "1.0.193", features = ["derive"] }
 http = "1.0.0"
 uuid = { version = "1.6.1", features = ["serde"] }
+chrono = { version = "0.4.31", features = ["serde"] }
 
