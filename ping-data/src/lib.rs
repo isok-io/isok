@@ -1,1 +1,1 @@
-mod check;
+pub mod check;
