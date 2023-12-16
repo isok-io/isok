@@ -258,11 +258,18 @@ pub struct HttpCheck {
     headers: HashMap<String, String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TcpCheck {
+    host: Host,
+    port: u16,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CheckKind {
     Dns(DnsCheck),
     Icmp(IcmpCheck),
     Http(HttpCheck),
+    Tcp(TcpCheck),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
