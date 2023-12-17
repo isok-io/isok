@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 pub use std::net::IpAddr;
 use std::time::Duration;
 
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Utc};
 pub use http::uri::Authority;
 pub use http::uri::InvalidUri;
 pub use http::Uri as HttpUri;
@@ -25,7 +25,7 @@ impl PartialEq for Domain {
 }
 
 impl Domain {
-    fn new(domain: Authority) -> Self {
+    pub fn new(domain: Authority) -> Self {
         Domain { inner: domain }
     }
 
@@ -187,6 +187,12 @@ pub struct IcmpCheck {
     host: Host,
 }
 
+impl IcmpCheck {
+    pub fn new(host: Host) -> Self {
+        Self { host }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Uri {
     inner: HttpUri,
@@ -274,14 +280,26 @@ pub enum CheckKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Check {
-    id: Uuid,
-    kind: CheckKind,
-    max_latency: Duration,
-    interval: Duration,
-    region: String,
-    created_at: NaiveDateTime,
-    updated_at: NaiveDateTime,
-    deleted_at: Option<NaiveDateTime>,
+    pub id: Uuid,
+    pub kind: CheckKind,
+    pub max_latency: Duration,
+    pub interval: Duration,
+    pub region: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
+}
+
+impl Into<CheckOutput> for Check {
+    fn into(self) -> CheckOutput {
+        CheckOutput {
+            id: Default::default(),
+            kind: self.kind,
+            max_latency: self.max_latency,
+            interval: self.interval,
+            region: self.region,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,11 +310,37 @@ pub struct CheckInput {
     region: String,
 }
 
+impl CheckInput {
+    pub fn new(kind: CheckKind, max_latency: Duration, interval: Duration, region: String) -> Self {
+        Self {
+            kind,
+            max_latency,
+            interval,
+            region,
+        }
+    }
+}
+
+impl Into<Check> for CheckInput {
+    fn into(self) -> Check {
+        Check {
+            id: Default::default(),
+            kind: self.kind,
+            max_latency: self.max_latency,
+            interval: self.interval,
+            region: self.region,
+            created_at: Utc::now().naive_utc(),
+            updated_at: Utc::now().naive_utc(),
+            deleted_at: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckOutput {
-    id: Uuid,
-    kind: CheckKind,
-    max_latency: Duration,
-    interval: Duration,
-    region: String,
+    pub id: Uuid,
+    pub kind: CheckKind,
+    pub max_latency: Duration,
+    pub interval: Duration,
+    pub region: String,
 }
