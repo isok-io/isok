@@ -11,3 +11,4 @@ axum = "0.7.2"
 env_logger = "0.10.1"
 sqlx = "0.7.3"
 pulsar = "6.1.0"
+ping-data = { path = "../ping-data" }
