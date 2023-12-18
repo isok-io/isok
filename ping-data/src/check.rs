@@ -293,7 +293,7 @@ pub struct Check {
 impl Into<CheckOutput> for Check {
     fn into(self) -> CheckOutput {
         CheckOutput {
-            id: Default::default(),
+            id: self.id,
             kind: self.kind,
             max_latency: self.max_latency,
             interval: self.interval,
@@ -324,7 +324,7 @@ impl CheckInput {
 impl Into<Check> for CheckInput {
     fn into(self) -> Check {
         Check {
-            id: Default::default(),
+            id: Uuid::new_v4(),
             kind: self.kind,
             max_latency: self.max_latency,
             interval: self.interval,
