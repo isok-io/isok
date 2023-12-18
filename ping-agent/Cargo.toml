@@ -17,3 +17,6 @@ nom = "7.1.3"
 cookie-factory = "0.3.2"
 uuid = "1.6.1"
 poule = "0.3.2"
+futures = "0.3.29"
+slab = "0.4.9"
+tokio-util = { version = "0.7.10", features = ["rt"] }
