@@ -300,32 +300,38 @@ pub struct Check {
 impl Into<CheckOutput> for Check {
     fn into(self) -> CheckOutput {
         CheckOutput {
-            id: Default::default(),
+            id: self.check_id,
             owner_id: self.owner_id,
             kind: self.kind,
             max_latency: self.max_latency,
             interval: self.interval,
             region: self.region,
         }
-    }ration,
-    interval: Duration,
-    region: String,
-}
-
-impl CheckInput {
-    pub fn new(kind: CheckKind, owner_id: Uuid, max_latency: Duration, interval: Duration, region: String) -> Self {
-        Self {
-            kind,
-            owner_id
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckInput {
     owner_id: Uuid,
     kind: CheckKind,
-    max_latency: Du,
+    max_latency: Duration,
+    interval: Duration,
+    region: String,
+}
+
+impl CheckInput {
+    pub fn new(
+        kind: CheckKind,
+        owner_id: Uuid,
+        max_latency: Duration,
+        interval: Duration,
+        region: String,
+    ) -> Self {
+        Self {
+            kind,
             max_latency,
             interval,
+            owner_id,
             region,
         }
     }
@@ -334,7 +340,7 @@ pub struct CheckInput {
 impl Into<Check> for CheckInput {
     fn into(self) -> Check {
         Check {
-            check_id: Default::default(),
+            check_id: Uuid::new_v4(),
             owner_id: self.owner_id,
             kind: self.kind,
             max_latency: self.max_latency,
