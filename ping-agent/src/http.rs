@@ -3,10 +3,14 @@ pub use ping_data::check::HttpCheck;
 use std::collections::HashMap;
 pub use std::time::Duration;
 
+use crate::warp10::{new_data, Warp10Data};
 pub use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client, Method, Request, RequestBuilder, Url,
 };
+use time::OffsetDateTime;
+use uuid::Uuid;
+use warp10::{Data, Label, Value};
 
 pub struct HttpClient {
     client: Client,
@@ -25,6 +29,7 @@ impl HttpClient {
         let elapsed = before.elapsed().ok()?;
 
         Some(HttpResult {
+            datetime: OffsetDateTime::now_utc(),
             request_time: elapsed,
             status: res.status().as_u16(),
         })
@@ -100,6 +105,16 @@ impl Into<Request> for HttpContext {
 }
 
 pub struct HttpResult {
+    pub datetime: OffsetDateTime,
     pub request_time: Duration,
     pub status: u16,
+}
+
+impl Warp10Data for HttpResult {
+    fn data(&self, uuid: Uuid) -> Vec<Data> {
+        vec![
+            new_data(self.datetime, "http_request_time", uuid, Value::Long(self.request_time.as_millis() as i64)),
+            new_data(self.datetime, "http_request_status", uuid, Value::Int(self.status as i32))
+        ]
+    }
 }

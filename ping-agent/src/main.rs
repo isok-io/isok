@@ -4,6 +4,7 @@ pub mod job;
 pub mod magic_pool;
 pub mod pulsar_client;
 pub mod tcp;
+pub mod warp10;
 
 use env_logger::{Builder as Logger, Env};
 use futures::TryStreamExt;

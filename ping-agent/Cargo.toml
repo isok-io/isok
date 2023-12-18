@@ -20,3 +20,5 @@ poule = "0.3.2"
 futures = "0.3.29"
 slab = "0.4.9"
 tokio-util = { version = "0.7.10", features = ["rt"] }
+warp10 = "2.0.0"
+time = "0.3.30"
