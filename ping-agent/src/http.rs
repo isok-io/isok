@@ -3,7 +3,7 @@ pub use ping_data::check::HttpCheck;
 use std::collections::HashMap;
 pub use std::time::Duration;
 
-use crate::warp10::{new_data, Warp10Data};
+use crate::warp10::{warp10_data, Warp10Data};
 pub use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client, Method, Request, RequestBuilder, Url,
@@ -113,8 +113,18 @@ pub struct HttpResult {
 impl Warp10Data for HttpResult {
     fn data(&self, uuid: Uuid) -> Vec<Data> {
         vec![
-            new_data(self.datetime, "http_request_time", uuid, Value::Long(self.request_time.as_millis() as i64)),
-            new_data(self.datetime, "http_request_status", uuid, Value::Int(self.status as i32))
+            warp10_data(
+                self.datetime,
+                "http_request_time",
+                uuid,
+                Value::Long(self.request_time.as_millis() as i64),
+            ),
+            warp10_data(
+                self.datetime,
+                "http_request_status",
+                uuid,
+                Value::Int(self.status as i32),
+            ),
         ]
     }
 }

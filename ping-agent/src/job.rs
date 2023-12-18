@@ -6,6 +6,7 @@ pub use std::future::Future;
 pub use std::pin::Pin;
 pub use std::sync::{Arc, Mutex};
 pub use std::time::Duration;
+pub use tokio::sync::mpsc;
 pub use tokio::task::JoinHandle;
 pub use tokio_util::task::LocalPoolHandle;
 pub use uuid::Uuid;
@@ -15,6 +16,7 @@ pub use ping_data::pulsar_commands::{Command, CommandKind};
 
 pub use crate::http::{HttpClient, HttpContext};
 pub use crate::magic_pool::MagicPool;
+use crate::warp10::Warp10Data;
 
 pub struct JobRessources {
     pub http_pool: MagicPool<HttpClient>,
@@ -56,6 +58,7 @@ impl Job {
         ctx: HttpContext,
         task_pool: &LocalPoolHandle,
         mut resources: &mut JobRessources,
+        warp10_snd: mpsc::Sender<warp10::Data>,
     ) {
         let borowed_id = id.clone();
         let borowed_req = ctx.clone().into();
@@ -65,7 +68,9 @@ impl Job {
 
             match http_result {
                 Some(res) => {
-                    ();
+                    for d in res.data(borowed_id.clone()) {
+                        warp10_snd.send(d).await;
+                    }
                     info!(
                         "Check http {borowed_id} has been trigerred with status {} and response time {} !",
                         res.status
@@ -80,10 +85,18 @@ impl Job {
         task_pool.spawn_pinned(|| process);
     }
 
-    pub fn execute(&self, task_pool: &LocalPoolHandle, mut resources: &mut JobRessources) {
+    pub fn execute(
+        &self,
+        task_pool: &LocalPoolHandle,
+        mut resources: &mut JobRessources,
+
+        warp10_snd: mpsc::Sender<warp10::Data>,
+    ) {
         match &self.kind {
             JobKind::Dummy => Self::execute_dummy(&self.id, task_pool),
-            JobKind::Http(ctx) => Self::execute_http(&self.id, ctx.clone(), task_pool, resources),
+            JobKind::Http(ctx) => {
+                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, warp10_snd)
+            }
         }
     }
 }
@@ -117,6 +130,7 @@ impl JobScheduler {
         range: usize,
         wait: Duration,
         resources: Arc<Mutex<JobRessources>>,
+        warp10_snd: mpsc::Sender<warp10::Data>,
         task_pool_size: usize,
     ) -> Self {
         let jobs = {
@@ -133,13 +147,14 @@ impl JobScheduler {
 
         let process = async move {
             let task_pool = LocalPoolHandle::new(task_pool_size);
+            let warp10_snd: mpsc::Sender<warp10::Data> = warp10_snd;
             let mut time_cursor = 0;
 
             loop {
                 if let Ok(mut jl) = job_list.lock() {
                     for (_, j) in &mut jl[time_cursor] {
                         if let Ok(mut resources) = resources.lock() {
-                            j.execute(&task_pool, &mut resources)
+                            j.execute(&task_pool, &mut resources, warp10_snd.clone())
                         }
                     }
                 }
@@ -187,15 +202,21 @@ pub struct JobsHandler {
     checks: HashMap<Uuid, JobLocation>,
     jobs: HashMap<Duration, JobScheduler>,
     scheduler_task_pool_size: usize,
+    warp10_snd: mpsc::Sender<warp10::Data>,
 }
 
 impl JobsHandler {
-    pub fn new(resources: JobRessources, scheduler_task_pool_size: usize) -> Self {
+    pub fn new(
+        resources: JobRessources,
+        warp10_snd: mpsc::Sender<warp10::Data>,
+        scheduler_task_pool_size: usize,
+    ) -> Self {
         Self {
             resources: Arc::new(Mutex::new(resources)),
             checks: HashMap::new(),
             jobs: HashMap::new(),
             scheduler_task_pool_size,
+            warp10_snd,
         }
     }
 
@@ -216,6 +237,7 @@ impl JobsHandler {
                     frequency.as_secs() as usize,
                     Duration::from_secs(1),
                     Arc::clone(&self.resources),
+                    self.warp10_snd.clone(),
                     self.scheduler_task_pool_size,
                 ),
             );

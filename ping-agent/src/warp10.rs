@@ -1,6 +1,8 @@
 use time::OffsetDateTime;
 use uuid::Uuid;
-use warp10::{Client, Data, Label, Value};
+pub use warp10::{Client, Data, Label, Value};
+
+use tokio::sync::mpsc::Receiver;
 
 #[derive(Debug, Clone)]
 pub struct Warp10ConnectionData {
@@ -37,6 +39,36 @@ pub trait Warp10Data {
     fn data(&self, uuid: Uuid) -> Vec<Data>;
 }
 
-pub fn new_data(datetime: OffsetDateTime, name: &str, uuid: Uuid, value: Value) -> Data {
-    Data::new(datetime, None, name.to_string(), vec![Label::new("check", uuid.as_hyphenated().to_string().as_str())], value)
+pub fn warp10_data(datetime: OffsetDateTime, name: &str, uuid: Uuid, value: Value) -> Data {
+    Data::new(
+        datetime,
+        None,
+        name.to_string(),
+        vec![Label::new(
+            "check",
+            uuid.as_hyphenated().to_string().as_str(),
+        )],
+        value,
+    )
+}
+
+pub async fn warp10_sender(
+    warp10_client: Warp10Client,
+    mut rcv: Receiver<Data>,
+    send_ratio: usize,
+) {
+    let mut datas = Vec::new();
+    let mut send_cursor = 0;
+
+    while let Some(d) = rcv.recv().await {
+        datas.push(d);
+
+        if send_cursor == send_ratio {
+            send_cursor = 0;
+            warp10_client.send(datas).await;
+            datas = Vec::new();
+        } else {
+            send_cursor += 1;
+        }
+    }
 }
