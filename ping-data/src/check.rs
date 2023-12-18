@@ -178,8 +178,8 @@ pub enum Host {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DnsCheck {
-    domain: Domain,
-    dns_server: Host,
+    pub domain: Domain,
+    pub dns_server: Host,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -196,6 +196,12 @@ impl IcmpCheck {
 #[derive(Debug, Clone)]
 pub struct Uri {
     inner: HttpUri,
+}
+
+impl ToString for Uri {
+    fn to_string(&self) -> String {
+        self.inner.to_string()
+    }
 }
 
 impl TryFrom<&str> for Uri {
@@ -260,14 +266,14 @@ impl Serialize for Uri {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct HttpCheck {
-    uri: Uri,
-    headers: HashMap<String, String>,
+    pub uri: Uri,
+    pub headers: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TcpCheck {
-    host: Host,
-    port: u16,
+    pub host: Host,
+    pub port: u16,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
