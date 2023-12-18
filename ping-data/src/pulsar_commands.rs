@@ -45,7 +45,7 @@ pub struct Command {
 impl Command {
     pub fn new_add_command(check: Check) -> Self {
         Self {
-            id: check.id,
+            id: check.check_id,
             kind: CommandKind::Add(AddCommand {
                 check: check.into(),
             }),
@@ -54,8 +54,8 @@ impl Command {
 
     pub fn new_remove_command(check: Check) -> Self {
         Self {
-            id: check.id,
-            kind: CommandKind::Remove(check.id),
+            id: check.check_id,
+            kind: CommandKind::Remove(check.check_id),
         }
     }
 

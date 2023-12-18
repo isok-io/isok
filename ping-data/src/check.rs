@@ -280,7 +280,8 @@ pub enum CheckKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Check {
-    pub id: Uuid,
+    pub check_id: Uuid,
+    pub owner_id: Uuid,
     pub kind: CheckKind,
     pub max_latency: Duration,
     pub interval: Duration,
@@ -294,6 +295,7 @@ impl Into<CheckOutput> for Check {
     fn into(self) -> CheckOutput {
         CheckOutput {
             id: Default::default(),
+            owner_id: self.owner_id,
             kind: self.kind,
             max_latency: self.max_latency,
             interval: self.interval,
@@ -304,6 +306,7 @@ impl Into<CheckOutput> for Check {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckInput {
+    owner_id: Uuid,
     kind: CheckKind,
     max_latency: Duration,
     interval: Duration,
@@ -311,9 +314,10 @@ pub struct CheckInput {
 }
 
 impl CheckInput {
-    pub fn new(kind: CheckKind, max_latency: Duration, interval: Duration, region: String) -> Self {
+    pub fn new(kind: CheckKind, owner_id: Uuid, max_latency: Duration, interval: Duration, region: String) -> Self {
         Self {
             kind,
+            owner_id,
             max_latency,
             interval,
             region,
@@ -324,7 +328,8 @@ impl CheckInput {
 impl Into<Check> for CheckInput {
     fn into(self) -> Check {
         Check {
-            id: Default::default(),
+            check_id: Default::default(),
+            owner_id: self.owner_id,
             kind: self.kind,
             max_latency: self.max_latency,
             interval: self.interval,
@@ -339,6 +344,7 @@ impl Into<Check> for CheckInput {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckOutput {
     pub id: Uuid,
+    pub owner_id: Uuid,
     pub kind: CheckKind,
     pub max_latency: Duration,
     pub interval: Duration,
