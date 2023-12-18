@@ -1,8 +1,8 @@
-use axum::Router;
-use axum::routing::{delete, get, post, put};
-use crate::auth::api::*;
-use crate::checks::api::*;
-use crate::users::api::*;
+pub use axum::Router;
+pub use axum::routing::{delete, get, post, put};
+pub use crate::auth::api::*;
+pub use crate::checks::api::*;
+pub use crate::users::api::*;
 
 pub fn app() -> Router<()> {
     Router::new()
