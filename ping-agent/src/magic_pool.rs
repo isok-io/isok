@@ -1,6 +1,7 @@
-pub use poule::{Checkout, Pool};
-pub use std::ops::DerefMut;
+pub use poule::Checkout;
+use poule::Pool;
 
+/// Self growing pool for stroring client and socket
 pub struct MagicPool<T: Default + Clone> {
     grow_factor: usize,
     pool: Pool<T>,

@@ -1,41 +1,44 @@
+/// http ping module
 pub mod http;
+/// icmp ping module
 pub mod icmp;
+/// Job scheduling module
 pub mod job;
+/// [MagicPool](crate::magic_pool::MagicPool)'s module
 pub mod magic_pool;
+/// pulsar related stuff
 pub mod pulsar_client;
+/// tcp ping module
 pub mod tcp;
+/// warp10 related stuff
 pub mod warp10;
 
 use env_logger::{Builder as Logger, Env};
 use futures::TryStreamExt;
 use log::{error, info};
 use std::str::FromStr;
-use tokio::runtime;
+use tokio::{runtime, sync::mpsc};
 
 pub use job::{JobRessources, JobsHandler};
 pub use pulsar_client::{PulsarClient, PulsarConnectionData};
-pub use tokio::sync::mpsc;
 pub use warp10::{Warp10Client, Warp10ConnectionData};
 
-fn env_panic(env: &'static str) -> impl Fn(std::env::VarError) -> String {
-    move |e| {
+/// Get env var as string or panic
+pub fn env_get(env: &'static str) -> String {
+    let env_panic = |e| {
         panic!("{env} is not set ({})", e);
-    }
+    };
+
+    std::env::var(env).map_err(env_panic).unwrap()
 }
 
-fn env_get(env: &'static str) -> String {
-    std::env::var(env).unwrap_or_else(env_panic(env))
-}
-
-fn env_parse_panic<T: FromStr>(env: &'static str, val: String) -> impl Fn(T::Err) -> T {
-    move |_| {
-        panic!("can't parse {env} ({val})");
-    }
-}
-
-fn env_get_num<T: FromStr>(env: &'static str, other: T) -> T {
+/// Get env var as number or panic, with a default number
+pub fn env_get_num<T: FromStr>(env: &'static str, other: T) -> T {
+    let env_parse_panic = |v| {
+        panic!("can't parse {env} ({v})");
+    };
     match std::env::var(env) {
-        Ok(v) => v.parse::<T>().unwrap_or_else(env_parse_panic::<T>(env, v)),
+        Ok(v) => v.parse::<T>().map_err(|_| env_parse_panic(v)).unwrap(),
         Err(_) => other,
     }
 }
@@ -44,12 +47,14 @@ fn env_get_num<T: FromStr>(env: &'static str, other: T) -> T {
 //     let env = std::env::var("DNS_RESOLVER");
 // }
 
+/// Start logger with default log level : info (overided by env var LOG_LEVEL)
 pub fn init_logger() {
     let env = Env::new().filter_or("LOG_LEVEL", "info");
     Logger::from_env(env).init();
 }
 
-async fn main_process(
+/// Main async process : pulsar consumer loop
+pub async fn main_process(
     pulsar_connection_data: PulsarConnectionData,
     warp10_connection_data: Warp10ConnectionData,
     task_pools_size: usize,
@@ -125,7 +130,8 @@ async fn main_process(
     Some(())
 }
 
-fn main() {
+/// The agent main entry point
+pub fn main() {
     init_logger();
 
     let job_number = env_get_num("JOBS", 1);

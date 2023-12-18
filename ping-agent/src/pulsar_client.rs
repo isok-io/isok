@@ -1,11 +1,12 @@
-pub use log::info;
-pub use ping_data::pulsar_commands::Command;
-pub use pulsar::{
+use log::info;
+use ping_data::pulsar_commands::Command;
+use pulsar::{
     consumer::InitialPosition, executor::TokioExecutor, Authentication, Consumer, ConsumerOptions,
     Pulsar, SubType,
 };
-pub use uuid::Uuid;
+use uuid::Uuid;
 
+/// Helper to make topic link from tenant, namespace and topic
 pub fn pulsar_link(connection_data: &PulsarConnectionData) -> String {
     format!(
         "persistent://{}/{}/{}",
@@ -15,6 +16,7 @@ pub fn pulsar_link(connection_data: &PulsarConnectionData) -> String {
     )
 }
 
+/// Pulsar connection data, passed by env vars
 #[derive(Debug, Clone)]
 pub struct PulsarConnectionData {
     pub pulsar_address: String,
@@ -24,6 +26,7 @@ pub struct PulsarConnectionData {
     pub pulsar_topic: String,
 }
 
+/// A pulsar client
 pub struct PulsarClient {
     pub consumer: Consumer<Command, TokioExecutor>,
 }

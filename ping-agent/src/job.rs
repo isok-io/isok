@@ -1,23 +1,24 @@
-pub use log::info;
-pub use reqwest::Client as ReqwestClient;
-pub use slab::Slab;
-pub use std::collections::HashMap;
-pub use std::future::Future;
-pub use std::pin::Pin;
-pub use std::sync::{Arc, Mutex};
-pub use std::time::Duration;
-pub use tokio::sync::mpsc;
-pub use tokio::task::JoinHandle;
-pub use tokio_util::task::LocalPoolHandle;
-pub use uuid::Uuid;
+use log::info;
+use slab::Slab;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
+use tokio_util::task::LocalPoolHandle;
+use uuid::Uuid;
 
-pub use ping_data::check::{CheckKind, CheckOutput};
-pub use ping_data::pulsar_commands::{Command, CommandKind};
+pub use ping_data::check::CheckKind;
+use ping_data::check::CheckOutput;
 
-pub use crate::http::{HttpClient, HttpContext};
-pub use crate::magic_pool::MagicPool;
+pub use ping_data::pulsar_commands::Command;
+use ping_data::pulsar_commands::CommandKind;
+
+use crate::http::{HttpClient, HttpContext};
+use crate::magic_pool::MagicPool;
 use crate::warp10::Warp10Data;
 
+/// Ressources shared between jobs
 pub struct JobRessources {
     pub http_pool: MagicPool<HttpClient>,
 }
@@ -30,12 +31,14 @@ impl Default for JobRessources {
     }
 }
 
+/// Different job contexts, mapped from [`CheckKind`]
 #[derive(Debug, Clone)]
 pub enum JobKind {
     Http(HttpContext),
     Dummy,
 }
 
+/// Everything you need to execute a job
 #[derive(Debug, Clone)]
 pub struct Job {
     id: Uuid,
@@ -43,21 +46,23 @@ pub struct Job {
 }
 
 impl Job {
+    /// Execute a dummy job (for test only)
     fn execute_dummy(id: &Uuid, task_pool: &LocalPoolHandle) {
         let borowed_id = id.clone();
         let process = async move {
-            info!("Check {borowed_id} has been trigerred !");
+            info!("Check dummy {borowed_id} has been trigerred !");
         };
 
         info!("Triggering check {id}...");
         task_pool.spawn_pinned(|| process);
     }
 
+    /// Execute a http job
     fn execute_http(
         id: &Uuid,
         ctx: HttpContext,
         task_pool: &LocalPoolHandle,
-        mut resources: &mut JobRessources,
+        resources: &mut JobRessources,
         warp10_snd: mpsc::Sender<warp10::Data>,
     ) {
         let borowed_id = id.clone();
@@ -85,11 +90,11 @@ impl Job {
         task_pool.spawn_pinned(|| process);
     }
 
+    /// Execute a job
     pub fn execute(
         &self,
         task_pool: &LocalPoolHandle,
-        mut resources: &mut JobRessources,
-
+        resources: &mut JobRessources,
         warp10_snd: mpsc::Sender<warp10::Data>,
     ) {
         match &self.kind {
@@ -197,6 +202,7 @@ impl JobScheduler {
     }
 }
 
+/// App main state handling pulsar commands ([`Command`]), storing jobs ([`Job`]) and job ressources ([`JobRessources`])
 pub struct JobsHandler {
     resources: Arc<Mutex<JobRessources>>,
     checks: HashMap<Uuid, JobLocation>,

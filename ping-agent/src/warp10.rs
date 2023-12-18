@@ -1,15 +1,23 @@
 use time::OffsetDateTime;
-use uuid::Uuid;
-pub use warp10::{Client, Data, Label, Value};
-
 use tokio::sync::mpsc::Receiver;
+use uuid::Uuid;
+use warp10::Client;
 
+/// Warp10 data
+pub use warp10::Data;
+/// Warp10 data label
+pub use warp10::Label;
+/// Warp10 data value
+pub use warp10::Value;
+
+/// Warp10 connection data, passed by env vars
 #[derive(Debug, Clone)]
 pub struct Warp10ConnectionData {
     pub warp10_address: String,
     pub warp10_token: String,
 }
 
+/// Warp10 client
 pub struct Warp10Client {
     pub client: Client,
     pub warp10_token: String,
@@ -25,6 +33,7 @@ impl Warp10Client {
         })
     }
 
+    /// Send warp10 data
     pub async fn send(&self, datas: Vec<Data>) -> Option<()> {
         self.client
             .get_writer(self.warp10_token.clone())
@@ -35,10 +44,13 @@ impl Warp10Client {
     }
 }
 
+/// Data that can be send to warp10, result of a [Job](crate::job::Job) execution
 pub trait Warp10Data {
+    /// Make data that can be send to warp10 after a [Job](crate::job::Job) execution
     fn data(&self, uuid: Uuid) -> Vec<Data>;
 }
 
+/// Helper to make warp10 data, (used in [`Warp10Data`] impl)
 pub fn warp10_data(datetime: OffsetDateTime, name: &str, uuid: Uuid, value: Value) -> Data {
     Data::new(
         datetime,
@@ -52,6 +64,7 @@ pub fn warp10_data(datetime: OffsetDateTime, name: &str, uuid: Uuid, value: Valu
     )
 }
 
+/// Warp10 writter main loop
 pub async fn warp10_sender(
     warp10_client: Warp10Client,
     mut rcv: Receiver<Data>,

@@ -1,17 +1,18 @@
 use log::error;
-pub use ping_data::check::HttpCheck;
-use std::collections::HashMap;
-pub use std::time::Duration;
-
-use crate::warp10::{warp10_data, Warp10Data};
-pub use reqwest::{
+use ping_data::check::HttpCheck;
+use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
-    Client, Method, Request, RequestBuilder, Url,
+    Client, Method, Request, Url,
 };
+use std::collections::HashMap;
+use std::time::Duration;
 use time::OffsetDateTime;
 use uuid::Uuid;
-use warp10::{Data, Label, Value};
+use warp10::{Data, Value};
 
+use crate::warp10::{warp10_data, Warp10Data};
+
+/// Http client, [`Client`] wrapper for storage in a [MagicPool](crate::magic_pool::MagicPool)
 pub struct HttpClient {
     client: Client,
 }
@@ -23,6 +24,7 @@ impl HttpClient {
         }
     }
 
+    /// Send async an http [`Request`]
     pub async fn send(&self, req: Request) -> Option<HttpResult> {
         let before = std::time::SystemTime::now();
         let res = self.client.execute(req).await.ok()?;
@@ -48,6 +50,7 @@ impl Clone for HttpClient {
     }
 }
 
+/// Context of an http [Job](crate::job::Job), [`Request`] wrapper
 #[derive(Debug)]
 pub struct HttpContext {
     req: Request,
@@ -104,6 +107,7 @@ impl Into<Request> for HttpContext {
     }
 }
 
+/// Result of an http request ready to be send to warp10
 pub struct HttpResult {
     pub datetime: OffsetDateTime,
     pub request_time: Duration,
