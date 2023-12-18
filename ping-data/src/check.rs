@@ -179,7 +179,7 @@ pub enum Host {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DnsCheck {
     pub domain: Domain,
-    pub dns_server: Host,
+    pub dns_server: IpAddr,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
