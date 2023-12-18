@@ -9,5 +9,12 @@ edition = "2021"
 tokio = { version = "1.35.0", features = ["macros", "rt-multi-thread", "rt"] }
 axum = "0.7.2"
 env_logger = "0.10.1"
-sqlx = "0.7.3"
+sqlx = { version = "0.7.3", features = ["runtime-tokio", "chrono", "postgres", "uuid", "json"] }
 pulsar = "6.1.0"
+opentelemetry = "0.21"
+opentelemetry_sdk = "0.21"
+opentelemetry-stdout = { version = "0.2.0", features = ["trace"] }
+tracing = "0.1"
+tracing-opentelemetry = "0.22"
+tracing-subscriber = "0.3"
+ping-data = { path = "../ping-data" }
