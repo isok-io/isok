@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 pub use std::net::IpAddr;
 use std::time::Duration;
 
-use chrono::{NaiveDateTime, Utc};
+use chrono::{Utc, DateTime};
 pub use http::uri::Authority;
 pub use http::uri::InvalidUri;
 pub use http::Uri as HttpUri;
@@ -292,9 +292,9 @@ pub struct Check {
     pub max_latency: Duration,
     pub interval: Duration,
     pub region: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl Into<CheckOutput> for Check {
@@ -320,18 +320,12 @@ pub struct CheckInput {
 }
 
 impl CheckInput {
-    pub fn new(
-        kind: CheckKind,
-        owner_id: Uuid,
-        max_latency: Duration,
-        interval: Duration,
-        region: String,
-    ) -> Self {
+    pub fn new(kind: CheckKind, owner_id: Uuid, max_latency: Duration, interval: Duration, region: String) -> Self {
         Self {
             kind,
+            owner_id,
             max_latency,
             interval,
-            owner_id,
             region,
         }
     }
@@ -346,8 +340,8 @@ impl Into<Check> for CheckInput {
             max_latency: self.max_latency,
             interval: self.interval,
             region: self.region,
-            created_at: Utc::now().naive_utc(),
-            updated_at: Utc::now().naive_utc(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
             deleted_at: None,
         }
     }
