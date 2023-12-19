@@ -15,7 +15,7 @@ use ping_data::check::CheckOutput;
 pub use ping_data::pulsar_commands::Command;
 use ping_data::pulsar_commands::CommandKind;
 
-use crate::http::{HttpClient, HttpContext};
+use crate::http::{HttpClient, HttpContext, HttpResult};
 use crate::magic_pool::MagicPool;
 use crate::warp10::Warp10Data;
 
@@ -77,13 +77,26 @@ impl Job {
                     for d in res.data(borowed_id.clone()) {
                         warp10_snd.send(d).await;
                     }
+
                     info!(
                         "Check http {borowed_id} has been trigerred with status {} and response time {} !",
                         res.status
                         , res.request_time.as_millis()
                     );
                 }
-                None => todo!(),
+                None => {
+                    let res = HttpResult {
+                        datetime: OffsetDateTime::now_utc(),
+                        request_time: Duration::from_millis(i64::MAX as u64),
+                        status: 500,
+                    };
+
+                    for d in res.data(borowed_id.clone()) {
+                        warp10_snd.send(d).await;
+                    }
+
+                    info!("Check http {borowed_id} has been trigerred and timed out.");
+                }
             };
         };
 
