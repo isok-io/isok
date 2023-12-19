@@ -1,8 +1,9 @@
-use log::info;
+use log::{error, info, warn};
 use slab::Slab;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio_util::task::LocalPoolHandle;
@@ -124,6 +125,7 @@ pub struct JobLocation {
 }
 
 pub struct JobScheduler {
+    frequency: Duration,
     fill_cursor: usize,
     empty_slot: Vec<usize>,
     jobs: Arc<Mutex<Vec<Slab<Job>>>>,
@@ -174,6 +176,7 @@ impl JobScheduler {
         };
 
         Self {
+            frequency: Duration::from_secs(range as u64),
             fill_cursor: 0,
             empty_slot: Vec::new(),
             jobs,
@@ -199,6 +202,36 @@ impl JobScheduler {
         }
 
         (cursor, position)
+    }
+
+    pub fn remove_job(&mut self, jl: JobLocation, id: Uuid) {
+        if let Ok(mut jobs) = self.jobs.lock() {
+            let slab = match jobs.get_mut(jl.offset) {
+                Some(s) => s,
+                None => {
+                    error!(
+                        "Could not find a job {id} at jobscheduler {} at offset {}",
+                        self.frequency.as_secs(),
+                        jl.offset
+                    );
+                    return;
+                }
+            };
+
+            if slab.contains(jl.position) {
+                slab.remove(jl.position);
+                self.empty_slot.push(jl.offset);
+            } else {
+                error!(
+                    "Could not find a job {id} at jobscheduler {} at offset {} at position {}",
+                    self.frequency.as_secs(),
+                    jl.offset,
+                    jl.position,
+                );
+            }
+        } else {
+            error!("Could not lock job mutex when trying to remove job {id}");
+        }
     }
 }
 
@@ -229,7 +262,7 @@ impl JobsHandler {
     pub fn handle_command(&mut self, cmd: Command) {
         match cmd.kind() {
             CommandKind::Add(a) => self.add_check(&a.check),
-            CommandKind::Remove(r) => todo!(),
+            CommandKind::Remove(id) => self.remove_check(id.clone()),
         }
     }
 
@@ -263,5 +296,26 @@ impl JobsHandler {
                 position,
             },
         );
+
+        info!("Check {} successfully added and scheduled !", c.id);
+    }
+
+    pub fn remove_check(&mut self, id: Uuid) {
+        if !self.checks.contains_key(&id) {
+            warn!("Trying to removing unkown check {id}");
+            return;
+        }
+
+        let jl = self
+            .checks
+            .remove(&id)
+            .expect("Should have a key after checking if key exist");
+
+        self.jobs
+            .get_mut(&jl.frequency)
+            .expect("Should have key here")
+            .remove_job(jl, id);
+
+        info!("Check {} successfully removed !", &id);
     }
 }

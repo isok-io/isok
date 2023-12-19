@@ -110,7 +110,7 @@ pub async fn main_process(
 
         match msg.deserialize() {
             Ok(command) => {
-                info!("handle new check");
+                info!("Handling new pulsar command...");
                 handler.handle_command(command);
             }
             Err(e) => {
