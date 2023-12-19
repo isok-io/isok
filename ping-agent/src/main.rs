@@ -16,6 +16,7 @@ pub mod warp10;
 use env_logger::{Builder as Logger, Env};
 use futures::TryStreamExt;
 use log::{error, info};
+use std::net::SocketAddr;
 use std::str::FromStr;
 use tokio::{runtime, sync::mpsc};
 
@@ -43,11 +44,14 @@ pub fn env_get_num<T: FromStr>(env: &'static str, other: T) -> T {
     }
 }
 
-// fn get_dns_resolver() -> SocketAddr {
-//     let env = std::env::var("DNS_RESOLVER");
-// }
+/// Helper to get DNS_RESOLVER env var as a [`SocketAddr`]
+pub fn env_get_dns_resolver() -> SocketAddr {
+    let env = std::env::var("DNS_RESOLVER").unwrap_or("127.0.0.1:53".to_owned());
+    env.parse()
+        .expect("Valid DNS_RESOLVER socket address expected")
+}
 
-/// Start logger with default log level : info (overided by env var LOG_LEVEL)
+/// Start logger with default log level : info (overridden by env var LOG_LEVEL)
 pub fn init_logger() {
     let env = Env::new().filter_or("LOG_LEVEL", "info");
     Logger::from_env(env).init();

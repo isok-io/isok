@@ -2,7 +2,7 @@ use log::{error, info, warn};
 use slab::Slab;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -27,7 +27,7 @@ pub struct JobRessources {
 impl Default for JobRessources {
     fn default() -> Self {
         JobRessources {
-            http_pool: MagicPool::new(10),
+            http_pool: MagicPool::with_cappacity(1000, 20),
         }
     }
 }
@@ -142,7 +142,7 @@ pub struct JobScheduler {
     fill_cursor: usize,
     empty_slot: Vec<usize>,
     jobs: Arc<Mutex<Vec<Slab<Job>>>>,
-    process: JoinHandle<()>,
+    _process: JoinHandle<()>,
 }
 
 impl JobScheduler {
@@ -171,6 +171,7 @@ impl JobScheduler {
             let mut time_cursor = 0;
 
             loop {
+                let now = SystemTime::now();
                 if let Ok(mut jl) = job_list.lock() {
                     for (_, j) in &mut jl[time_cursor] {
                         if let Ok(mut resources) = resources.lock() {
@@ -179,12 +180,12 @@ impl JobScheduler {
                     }
                 }
 
-                std::thread::sleep(wait);
                 if time_cursor + 1 == range {
                     time_cursor = 0;
                 } else {
                     time_cursor += 1;
                 }
+                std::thread::sleep(wait - now.elapsed().expect("System should have time"));
             }
         };
 
@@ -193,7 +194,7 @@ impl JobScheduler {
             fill_cursor: 0,
             empty_slot: Vec::new(),
             jobs,
-            process: tokio::task::spawn(process),
+            _process: tokio::task::spawn(process),
         }
     }
 
