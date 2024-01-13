@@ -1,12 +1,13 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use axum::{Extension, Json};
+use axum::Json;
 use log::info;
 use uuid::Uuid;
 
-use ping_data::check::{CheckInput, CheckOutput};
+use ping_data::check::{CheckInput, CheckKind, CheckOutput};
 
 use crate::api::ApiHandler;
 
@@ -38,10 +39,33 @@ pub async fn create_check(
     handler.db.insert_check(check).await
 }
 
-pub async fn update_check() {
-    todo!()
+pub async fn change_check_kind(
+    State(handler): State<Arc<ApiHandler>>,
+    Path(id): Path<Uuid>,
+    Json(check_kind): Json<CheckKind>,
+) -> Result<(), impl IntoResponse> {
+    handler.db.change_check_kind(id, check_kind).await
 }
 
-pub async fn delete_check() {
-    todo!()
+pub async fn change_check_interval(
+    State(handler): State<Arc<ApiHandler>>,
+    Path(id): Path<Uuid>,
+    Json(interval): Json<Duration>,
+) -> Result<(), impl IntoResponse> {
+    handler.db.change_check_interval(id, interval).await
+}
+
+pub async fn change_check_max_latency(
+    State(handler): State<Arc<ApiHandler>>,
+    Path(id): Path<Uuid>,
+    Json(max_latency): Json<Duration>,
+) -> Result<(), impl IntoResponse> {
+    handler.db.change_check_max_latency(id, max_latency).await
+}
+
+pub async fn delete_check(
+    State(handler): State<Arc<ApiHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<(), impl IntoResponse> {
+    handler.db.delete_check(id).await
 }
