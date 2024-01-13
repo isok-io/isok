@@ -26,6 +26,13 @@ pub struct UserInput {
     pub email_address: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserOutput {
+    pub owner_id: Uuid,
+    pub username: String,
+    pub email_address: String,
+}
+
 impl Into<User> for UserInput {
     fn into(self) -> User {
         let timestamp = Utc::now();
@@ -37,6 +44,16 @@ impl Into<User> for UserInput {
             created_at: timestamp,
             updated_at: timestamp,
             deleted_at: None,
+        }
+    }
+}
+
+impl Into<UserOutput> for User {
+    fn into(self) -> UserOutput {
+        UserOutput {
+            owner_id: self.owner_id,
+            username: self.username,
+            email_address: self.email_address,
         }
     }
 }
