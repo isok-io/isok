@@ -5,11 +5,13 @@ pub use axum::extract::{Path, State};
 pub use axum::response::IntoResponse;
 pub use axum::{Extension, Json};
 pub use serde::{Deserialize, Serialize};
+use sqlx::Error;
 pub use uuid::Uuid;
 
 use ping_data::owner::UserOutput;
 pub use ping_data::owner::{User, UserInput};
 
+use crate::api::errors::DbQueryError;
 pub use crate::api::errors::{
     Forbidden, InvalidInput, NotFoundError, PasswordHashError, WrongCredentials,
 };
@@ -51,13 +53,12 @@ pub async fn get_user(
 ) -> Result<Json<UserOutput>, impl IntoResponse> {
     match state.db.get_user(id).await {
         Ok(user) => Ok(<User as Into<UserOutput>>::into(user).into()),
-        Err(e) => {
-            let _ = e.into_response();
-            Err(NotFoundError {
-                model: "user",
-                value: id,
-            })
+        Err(DbQueryError(Error::RowNotFound)) => Err(NotFoundError {
+            model: "user",
+            value: id,
         }
+        .into_response()),
+        Err(e) => Err(e.into_response()),
     }
 }
 
@@ -105,7 +106,14 @@ pub async fn rename_user(
         .db
         .update_user_username(id, username.username)
         .await
-        .map_err(|e| e.into_response())
+        .map_err(|e| match e {
+            DbQueryError(Error::RowNotFound) => NotFoundError {
+                model: "user",
+                value: id,
+            }
+            .into_response(),
+            e => e.into_response(),
+        })
 }
 
 pub async fn change_user_email(
@@ -128,7 +136,14 @@ pub async fn change_user_email(
         .db
         .update_user_email(id, email.email_address)
         .await
-        .map_err(|e| e.into_response())
+        .map_err(|e| match e {
+            DbQueryError(Error::RowNotFound) => NotFoundError {
+                model: "user",
+                value: id,
+            }
+            .into_response(),
+            e => e.into_response(),
+        })
 }
 
 pub async fn change_user_password(
@@ -182,7 +197,14 @@ pub async fn change_user_password(
         .db
         .update_user_password(id, password)
         .await
-        .map_err(|e| e.into_response())
+        .map_err(|e| match e {
+            DbQueryError(Error::RowNotFound) => NotFoundError {
+                model: "user",
+                value: id,
+            }
+            .into_response(),
+            e => e.into_response(),
+        })
 }
 
 pub async fn delete_user(
@@ -194,9 +216,12 @@ pub async fn delete_user(
         return Err(Forbidden.into_response());
     }
 
-    state
-        .db
-        .delete_user(id)
-        .await
-        .map_err(|e| e.into_response())
+    state.db.delete_user(id).await.map_err(|e| match e {
+        DbQueryError(Error::RowNotFound) => NotFoundError {
+            model: "user",
+            value: id,
+        }
+        .into_response(),
+        e => e.into_response(),
+    })
 }
