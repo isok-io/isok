@@ -7,6 +7,7 @@ pub use axum::{Extension, Json};
 pub use serde::{Deserialize, Serialize};
 pub use uuid::Uuid;
 
+use ping_data::owner::UserOutput;
 pub use ping_data::owner::{User, UserInput};
 
 pub use crate::api::errors::{
@@ -34,16 +35,22 @@ pub struct PasswordInput {
 
 pub async fn list_users(
     State(state): State<Arc<AuthHandler>>,
-) -> Result<Json<Vec<User>>, impl IntoResponse> {
-    state.db.get_users().await.map(|users| users.into())
+) -> Result<Json<Vec<UserOutput>>, impl IntoResponse> {
+    state.db.get_users().await.map(|users| {
+        users
+            .into_iter()
+            .map(|user| user.into())
+            .collect::<Vec<UserOutput>>()
+            .into()
+    })
 }
 
 pub async fn get_user(
     State(state): State<Arc<AuthHandler>>,
     Path(id): Path<Uuid>,
-) -> Result<Json<User>, impl IntoResponse> {
+) -> Result<Json<UserOutput>, impl IntoResponse> {
     match state.db.get_user(id).await {
-        Ok(user) => Ok(user.into()),
+        Ok(user) => Ok(<User as Into<UserOutput>>::into(user).into()),
         Err(e) => {
             let _ = e.into_response();
             Err(NotFoundError {
