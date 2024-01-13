@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 pub use std::net::IpAddr;
 use std::time::Duration;
 
-use chrono::{Utc, DateTime};
+use chrono::{DateTime, Utc};
 pub use http::uri::Authority;
 pub use http::uri::InvalidUri;
 pub use http::Uri as HttpUri;
@@ -312,15 +312,21 @@ impl Into<CheckOutput> for Check {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckInput {
-    owner_id: Uuid,
-    kind: CheckKind,
-    max_latency: Duration,
-    interval: Duration,
-    region: String,
+    pub owner_id: Uuid,
+    pub kind: CheckKind,
+    pub max_latency: Duration,
+    pub interval: Duration,
+    pub region: String,
 }
 
 impl CheckInput {
-    pub fn new(kind: CheckKind, owner_id: Uuid, max_latency: Duration, interval: Duration, region: String) -> Self {
+    pub fn new(
+        kind: CheckKind,
+        owner_id: Uuid,
+        max_latency: Duration,
+        interval: Duration,
+        region: String,
+    ) -> Self {
         Self {
             kind,
             owner_id,
