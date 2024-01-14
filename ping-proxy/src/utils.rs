@@ -2,14 +2,25 @@ pub mod proxy {
     pub use std::sync::Arc;
     pub use std::time::Duration;
 
+    use axum::response::IntoResponse;
+    use http::Uri;
     pub use log::{error, trace};
     pub use reqwest::header::HeaderMap;
     pub use reqwest::ClientBuilder;
+    use reqwest::StatusCode;
     pub use serde::de::DeserializeOwned;
+    use serde::Serialize;
 
+    use crate::api::errors::{Body, NotFoundError, RegionNotFound, ReqwestError, ReqwestErrors};
     pub use crate::api::ApiHandler;
 
-    pub async fn apis_req_vec<T>(state: Arc<ApiHandler>, path: &str) -> Vec<T>
+    #[derive(Clone)]
+    struct Response {
+        status: StatusCode,
+        body: String,
+    }
+
+    pub async fn get_all<T>(state: Arc<ApiHandler>, path: &str) -> Vec<T>
     where
         T: DeserializeOwned + Clone,
     {
@@ -43,7 +54,7 @@ pub mod proxy {
         res.iter().flatten().map(|e| e.to_owned()).collect()
     }
 
-    pub async fn apis_req<T>(state: Arc<ApiHandler>, path: &str, id: String) -> Option<T>
+    pub async fn get_one<T>(state: Arc<ApiHandler>, path: &str, id: String) -> Option<T>
     where
         T: DeserializeOwned + Clone,
     {
@@ -75,6 +86,155 @@ pub mod proxy {
         }
 
         None
+    }
+
+    pub async fn create<T>(
+        state: Arc<ApiHandler>,
+        path: &str,
+        region: String,
+        data: T,
+    ) -> impl IntoResponse
+    where
+        T: Serialize + Clone,
+    {
+        if !state.apis.contains_key(&region) {
+            return RegionNotFound(region).into_response();
+        }
+        let region = state.apis.get(&region).unwrap();
+
+        let client = ClientBuilder::new()
+            .default_headers(HeaderMap::new())
+            .build()
+            .unwrap();
+
+        match client
+            .post(format!("{region}{path}"))
+            .json(&data)
+            .timeout(Duration::from_secs(15))
+            .send()
+            .await
+        {
+            Ok(res) => axum::response::Response::builder()
+                .status(res.status().as_u16())
+                .body(Body::new(
+                    res.text()
+                        .await
+                        .map(|t| t.to_string())
+                        .unwrap_or("".to_string()),
+                ))
+                .unwrap(),
+            Err(e) => ReqwestError::error(region.clone(), e).into_response(),
+        }
+    }
+
+    pub async fn update<T>(
+        state: Arc<ApiHandler>,
+        path: &str,
+        region: Option<String>,
+        data: T,
+    ) -> impl IntoResponse
+    where
+        T: Serialize + Clone,
+    {
+        let client = ClientBuilder::new()
+            .default_headers(HeaderMap::new())
+            .build()
+            .unwrap();
+
+        let res = match region {
+            Some(region) => {
+                if !state.apis.contains_key(&region) {
+                    return RegionNotFound(region).into_response();
+                }
+                let region = state.apis.get(&region).unwrap();
+                match client
+                    .put(format!("{region}{path}"))
+                    .json(&data)
+                    .timeout(Duration::from_secs(15))
+                    .send()
+                    .await
+                    .map_err(|e| ReqwestError::error(region.clone(), e))
+                {
+                    Ok(r) => Ok(Response {
+                        status: r.status(),
+                        body: r.text().await.unwrap_or("".to_string()),
+                    }),
+                    Err(e) => Err(e),
+                }
+            }
+            None => {
+                let mut res: Result<Response, ReqwestError> =
+                    Err(ReqwestError::none(Uri::default()));
+                for uri in state.apis.values() {
+                    let r = match client
+                        .get(format!("{uri}{path}"))
+                        .timeout(Duration::from_secs(15))
+                        .send()
+                        .await
+                    {
+                        Ok(r) => Ok(Response {
+                            status: r.status(),
+                            body: r.text().await.unwrap_or("".to_string()),
+                        }),
+                        Err(e) => Err(ReqwestError::error(uri.clone(), e)),
+                    };
+
+                    if let Ok(output) = r.clone() {
+                        if output.status.is_success() {
+                            break;
+                        }
+                    }
+
+                    res = r;
+                }
+                res
+            }
+        };
+
+        match res {
+            Ok(res) => axum::response::Response::builder()
+                .status(res.status.as_u16())
+                .body(Body::new(res.body))
+                .unwrap(),
+            Err(e) => e.into_response(),
+        }
+    }
+
+    pub async fn delete(state: Arc<ApiHandler>, path: &str, id: String) -> impl IntoResponse {
+        let client = ClientBuilder::new()
+            .default_headers(HeaderMap::new())
+            .build()
+            .unwrap();
+
+        for uri in state.apis.values() {
+            let r = match client
+                .delete(format!("{uri}{path}/{id}"))
+                .timeout(Duration::from_secs(15))
+                .send()
+                .await
+            {
+                Ok(res) => Some(res),
+                Err(e) => {
+                    error!("Error while contacting api {uri}: {e}");
+                    None
+                }
+            };
+
+            if let Some(output) = r {
+                if output.status().is_success() {
+                    return axum::response::Response::builder()
+                        .status(output.status().as_u16())
+                        .body(Body::new(output.text().await.unwrap_or("".to_string())))
+                        .unwrap();
+                }
+            }
+        }
+
+        NotFoundError {
+            model: path,
+            value: id,
+        }
+        .into_response()
     }
 }
 
@@ -129,10 +289,11 @@ pub mod auth {
     pub mod token {
         pub use std::str::FromStr;
 
-        pub use crate::api::errors::BiscuitError;
         pub use biscuit_auth::macros::biscuit;
         pub use biscuit_auth::{Biscuit, KeyPair, PrivateKey, UnverifiedBiscuit};
         pub use uuid::Uuid;
+
+        pub use crate::api::errors::BiscuitError;
 
         pub fn build_token(uuid: Uuid, private_key: &PrivateKey) -> Result<String, BiscuitError> {
             let uuid = uuid.as_hyphenated().to_string();

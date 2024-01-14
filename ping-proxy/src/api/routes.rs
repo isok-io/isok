@@ -6,7 +6,8 @@ pub use axum::routing::{delete, get, post, put};
 pub use axum::{middleware, Router};
 
 pub use crate::api::auth::login_handler;
-pub use crate::api::checks::{create_check, delete_check, get_check, list_checks, update_check};
+use crate::api::checks::{change_check_interval, change_check_kind, change_check_max_latency};
+pub use crate::api::checks::{create_check, delete_check, get_check, list_checks};
 pub use crate::api::user::{
     change_user_email, change_user_password, create_user, delete_user, get_user, list_users,
     rename_user,
@@ -55,7 +56,9 @@ pub fn checks_router(api_handler: Arc<ApiHandler>, auth_handler: Arc<AuthHandler
         .route("/", get(list_checks))
         .route("/:id", get(get_check))
         .route("/", post(create_check))
-        .route("/:id", put(update_check))
+        .route("/:id/kind", put(change_check_kind))
+        .route("/:id/interval", put(change_check_interval))
+        .route("/:id/max_latency", put(change_check_max_latency))
         .route("/:id", delete(delete_check))
         .route_layer(middleware::from_fn_with_state(
             auth_handler,

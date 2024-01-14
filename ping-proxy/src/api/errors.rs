@@ -5,6 +5,7 @@ pub use argon2::password_hash;
 pub use axum::body::Body;
 pub use axum::response::{IntoResponse, Response};
 pub use http::StatusCode;
+use http::Uri;
 pub use log::error;
 
 pub struct DbQueryError(pub sqlx::Error);
@@ -162,6 +163,56 @@ impl BiscuitError {
 impl IntoResponse for BiscuitError {
     fn into_response(self) -> Response {
         error!(target: "BISCUIT", "{}", self.0);
+
+        Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::new("Internal server error".to_string()))
+            .unwrap()
+    }
+}
+
+pub struct RegionNotFound(pub String);
+
+impl IntoResponse for RegionNotFound {
+    fn into_response(self) -> Response {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::new(format!("Region {} not found", self.0)))
+            .unwrap()
+    }
+}
+
+#[derive(Clone)]
+pub enum ReqwestErrors {
+    Err(String),
+    None
+}
+
+impl Display for ReqwestErrors {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReqwestErrors::Err(e) => write!(f, "{e}"),
+            ReqwestErrors::None => write!(f, "")
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ReqwestError(pub Uri, ReqwestErrors);
+
+impl ReqwestError {
+    pub fn none(uri: Uri) -> Self {
+        Self(uri, ReqwestErrors::None)
+    }
+    
+    pub fn error(uri: Uri, e: reqwest::Error) -> Self {
+        Self(uri, ReqwestErrors::Err(e.to_string()))
+    }
+}
+
+impl IntoResponse for ReqwestError{
+    fn into_response(self) -> Response {
+        error!(target: "REQWEST", "Error contacting api: {}: {}", self.0, self.1);
 
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
