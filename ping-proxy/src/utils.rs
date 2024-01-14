@@ -180,13 +180,13 @@ pub mod proxy {
                         Err(e) => Err(ReqwestError::error(uri.clone(), e)),
                     };
 
-                    if let Ok(output) = r.clone() {
+                    res = r.clone();
+
+                    if let Ok(output) = r {
                         if output.status.is_success() {
                             break;
                         }
                     }
-
-                    res = r;
                 }
                 res
             }
