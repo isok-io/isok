@@ -167,7 +167,7 @@ pub mod proxy {
                     Err(ReqwestError::none(Uri::default()));
                 for uri in state.apis.values() {
                     let r = match client
-                        .get(format!("{uri}{path}"))
+                        .put(format!("{uri}{path}"))
                         .timeout(Duration::from_secs(15))
                         .send()
                         .await
