@@ -168,6 +168,7 @@ pub mod proxy {
                 for uri in state.apis.values() {
                     let r = match client
                         .put(format!("{uri}{path}"))
+                        .json(&data)
                         .timeout(Duration::from_secs(15))
                         .send()
                         .await
