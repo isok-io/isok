@@ -59,7 +59,7 @@ impl DbHandler {
             r#"
                 SELECT check_id, owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
                 FROM checks
-                WHERE deleted_at IS NOT NULL
+                WHERE deleted_at IS NULL
             "#
         ).map(|row| Check {
             check_id: row.check_id,
@@ -79,7 +79,7 @@ impl DbHandler {
             r#"
                 SELECT check_id, owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
                 FROM checks
-                WHERE deleted_at IS NOT NULL
+                WHERE deleted_at IS NULL
                 AND check_id = $1
             "#,
             check_id
@@ -122,7 +122,7 @@ impl DbHandler {
     ) -> Result<(), DbQueryError> {
         sqlx::query!(
             r#"
-UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NOT NULL
+UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
         "#,
             serde_json::to_value(check_kind).unwrap(),
             Utc::now(),
@@ -141,7 +141,7 @@ UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at 
     ) -> Result<(), DbQueryError> {
         sqlx::query!(
             r#"
-UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NOT NULL
+UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
         "#,
             duration_to_pg_interval(interval),
             Utc::now(),
@@ -160,7 +160,7 @@ UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted
     ) -> Result<(), DbQueryError> {
         sqlx::query!(
             r#"
-UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NOT NULL
+UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
         "#,
             duration_to_pg_interval(max_latency),
             Utc::now(),
@@ -175,7 +175,7 @@ UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND dele
     pub async fn delete_check(&self, check_id: Uuid) -> Result<(), DbQueryError> {
         sqlx::query!(
             r#"
-UPDATE checks SET deleted_at = $1 WHERE check_id = $2 AND deleted_at IS NOT NULL
+UPDATE checks SET deleted_at = $1 WHERE check_id = $2 AND deleted_at IS NULL
         "#,
             Utc::now(),
             check_id
