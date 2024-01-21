@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::http::Response;
@@ -9,9 +9,9 @@ use super::checks::{
     change_check_interval, change_check_kind, change_check_max_latency, create_check, delete_check,
     get_check, list_checks,
 };
-use super::ApiHandler;
+use super::ApiHandlerState;
 
-pub fn app(api_handler: Arc<ApiHandler>) -> Router<()> {
+pub fn app(api_handler: ApiHandlerState) -> Router<()> {
     Router::new()
         .route("/ping", get(ping))
         .route("/teapot", get(teapot))
@@ -29,7 +29,7 @@ pub async fn teapot() -> Response<Body> {
         .unwrap()
 }
 
-pub fn checks_router(handler: Arc<ApiHandler>) -> Router<()> {
+pub fn checks_router(handler: ApiHandlerState) -> Router<()> {
     Router::new()
         .route("/", get(list_checks))
         .route("/:id", get(get_check))

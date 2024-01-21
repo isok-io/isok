@@ -3,12 +3,13 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use log::error;
 
-pub enum DbQueryError {
+pub enum RequestError {
     Sqlx(sqlx::Error),
     NotFound { model: &'static str, value: String },
+    InternalError,
 }
 
-impl IntoResponse for DbQueryError {
+impl IntoResponse for RequestError {
     fn into_response(self) -> Response {
         let internal_error = Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
@@ -23,14 +24,15 @@ impl IntoResponse for DbQueryError {
         };
 
         match self {
-            DbQueryError::Sqlx(e) => {
+            RequestError::Sqlx(e) => {
                 match e.as_database_error() {
                     Some(e) => error!(target: "DB", "{e}"),
                     None => error!(target: "DB", "unknown database error"),
-                }
+                };
                 internal_error
             }
-            DbQueryError::NotFound { model, value } => not_found(model, value),
+            RequestError::NotFound { model, value } => not_found(model, value),
+            RequestError::InternalError => internal_error,
         }
     }
 }

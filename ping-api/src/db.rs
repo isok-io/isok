@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::api::errors::DbQueryError;
+use crate::api::errors::RequestError;
 
 pub fn pg_interval_to_duration(interval: PgInterval) -> Duration {
     Duration::from_micros(interval.microseconds as u64)
@@ -25,14 +25,14 @@ pub fn map_row_not_found(
     err: sqlx::Error,
     model: &'static str,
     value: impl ToString,
-) -> DbQueryError {
+) -> RequestError {
     if let sqlx::Error::RowNotFound = err {
-        DbQueryError::NotFound {
+        RequestError::NotFound {
             model,
             value: value.to_string(),
         }
     } else {
-        DbQueryError::Sqlx(err)
+        RequestError::Sqlx(err)
     }
 }
 
@@ -54,7 +54,7 @@ impl DbHandler {
             .ok()
     }
 
-    pub async fn get_checks(&self) -> Result<Vec<Check>, DbQueryError> {
+    pub async fn get_checks(&self) -> Result<Vec<Check>, RequestError> {
         sqlx::query!(
             r#"
                 SELECT check_id, owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
@@ -71,10 +71,10 @@ impl DbHandler {
             created_at: row.created_at,
             updated_at: row.updated_at,
             deleted_at: row.deleted_at,
-        }).fetch_all(&self.pool).await.map_err(DbQueryError::Sqlx)
+        }).fetch_all(&self.pool).await.map_err(RequestError::Sqlx)
     }
 
-    pub async fn get_check(&self, check_id: Uuid) -> Result<Check, DbQueryError> {
+    pub async fn get_check(&self, check_id: Uuid) -> Result<Check, RequestError> {
         sqlx::query!(
             r#"
                 SELECT check_id, owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
@@ -97,13 +97,14 @@ impl DbHandler {
         .fetch_one(&self.pool).await.map_err(|e| map_row_not_found(e, "check" , check_id))
     }
 
-    pub async fn insert_check(&self, check: CheckInput) -> Result<(), DbQueryError> {
+    pub async fn insert_check(&self, check: CheckInput) -> Result<Check, RequestError> {
         let now = Utc::now();
 
         sqlx::query!(
             r#"
                 INSERT INTO checks(owner_id, kind, max_latency, interval, region, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING check_id,owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
             "#,
             check.owner_id,
             serde_json::to_value(check.kind).unwrap(),
@@ -112,14 +113,25 @@ impl DbHandler {
             check.region,
             now,
             now
-        ).execute(&self.pool).await.map(|_| ()).map_err(DbQueryError::Sqlx)
+        ).map(|row| Check {
+            check_id: row.check_id,
+            owner_id: row.owner_id,
+            kind: serde_json::from_value(row.kind).unwrap(),
+            max_latency: pg_interval_to_duration(row.max_latency),
+            interval: pg_interval_to_duration(row.interval),
+            region: row.region,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            deleted_at: row.deleted_at,
+        })
+        .fetch_one(&self.pool).await.map_err(RequestError::Sqlx)
     }
 
     pub async fn change_check_kind(
         &self,
         check_id: Uuid,
         check_kind: CheckKind,
-    ) -> Result<(), DbQueryError> {
+    ) -> Result<(), RequestError> {
         sqlx::query!(
             r#"
 UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
@@ -138,7 +150,7 @@ UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at 
         &self,
         check_id: Uuid,
         interval: Duration,
-    ) -> Result<(), DbQueryError> {
+    ) -> Result<(), RequestError> {
         sqlx::query!(
             r#"
 UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
@@ -157,7 +169,7 @@ UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted
         &self,
         check_id: Uuid,
         max_latency: Duration,
-    ) -> Result<(), DbQueryError> {
+    ) -> Result<(), RequestError> {
         sqlx::query!(
             r#"
 UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
@@ -172,17 +184,28 @@ UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND dele
         .map_err(|e| map_row_not_found(e, "check", check_id))
     }
 
-    pub async fn delete_check(&self, check_id: Uuid) -> Result<(), DbQueryError> {
+    pub async fn delete_check(&self, check_id: Uuid) -> Result<Check, RequestError> {
         sqlx::query!(
             r#"
-UPDATE checks SET deleted_at = $1 WHERE check_id = $2 AND deleted_at IS NULL
+            UPDATE checks SET deleted_at = $1 WHERE check_id = $2 AND deleted_at IS NULL
+            RETURNING check_id,owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
         "#,
             Utc::now(),
             check_id
         )
-        .execute(&self.pool)
+        .map(|row| Check {
+            check_id: row.check_id,
+            owner_id: row.owner_id,
+            kind: serde_json::from_value(row.kind).unwrap(),
+            max_latency: pg_interval_to_duration(row.max_latency),
+            interval: pg_interval_to_duration(row.interval),
+            region: row.region,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            deleted_at: row.deleted_at,
+        })
+        .fetch_one(&self.pool)
         .await
-        .map(|_| ())
         .map_err(|e| map_row_not_found(e, "check", check_id))
     }
 }

@@ -1,11 +1,20 @@
 pub mod api;
 pub mod db;
+pub mod pulsar;
 
 use api::ApiHandler;
 use db::DbHandler;
 use env_logger::{Builder as Logger, Env};
 use log::{error, info};
-use std::{process, str::FromStr, sync::Arc};
+use std::{
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
+
+use crate::{
+    api::ApiHandlerState,
+    pulsar::{PulsarClient, PulsarConnectionData},
+};
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -39,16 +48,53 @@ async fn main() {
     let port = env_get("PORT");
     let postgresql_uri = env_get("DATABASE_URL");
 
+    let pulsar_address = env_get("PULSAR_ADDRESS");
+    let pulsar_token = env_get("PULSAR_TOKEN");
+    let pulsar_tenant = env_get("PULSAR_TENANT");
+    let pulsar_namespace = env_get("PULSAR_NAMESPACE");
+    let pulsar_topic = env_get("PULSAR_TOPIC");
+
     init_logger();
 
-    let db = DbHandler::connect(&postgresql_uri)
-        .await
-        .unwrap_or_else(|| {
-            error!("Could not open database at {}", postgresql_uri);
-            process::exit(1);
-        });
+    let pulsar_connection_data = PulsarConnectionData {
+        pulsar_address,
+        pulsar_token,
+        pulsar_tenant,
+        pulsar_namespace,
+        pulsar_topic,
+    };
 
-    let app = api::routes::app(Arc::new(ApiHandler { db }));
+    info!("Connecting to database...");
+    let db = match DbHandler::connect(&postgresql_uri).await {
+        Some(db) => {
+            info!("Connected to database !");
+            db
+        }
+        None => {
+            error!("Failed to connect to database");
+            std::process::exit(1);
+        }
+    };
+
+    info!(
+        "Connecting to pulsar topic {}...",
+        pulsar::pulsar_link(&pulsar_connection_data)
+    );
+    let pulsar_client = match PulsarClient::new(pulsar_connection_data).await {
+        Some(pc) => {
+            info!("Connected to pulsar topic !");
+            pc
+        }
+        None => {
+            error!("Failed to connect to pulsar topic");
+            std::process::exit(1);
+        }
+    };
+
+    let app = api::routes::app(ApiHandlerState::new(ApiHandler {
+        db,
+        pulsar_client: pulsar_client,
+    }));
 
     let listener = tokio::net::TcpListener::bind(format!("{address}:{port}"))
         .await
