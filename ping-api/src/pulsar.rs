@@ -1,3 +1,4 @@
+use log::{error, info};
 use ping_data::{check::Check, pulsar_commands::Command};
 use pulsar::{
     compression::Compression, executor::TokioExecutor, proto, Authentication, Producer,
@@ -60,10 +61,30 @@ impl PulsarClient {
     }
 
     pub async fn add_check(&mut self, check: Check) {
-        let a = self.producer.send(Command::new_add_command(check)).await;
+        let a = self
+            .producer
+            .send(Command::new_add_command(check.clone()))
+            .await;
+        match a {
+            Ok(a) => match a.await {
+                Ok(_) => info!("Check {} sent to agent !", check.check_id),
+                Err(_) => error!("Check {} could not be sent to agent.", check.check_id),
+            },
+            Err(_) => error!("Check {} could not be sent to agent.", check.check_id),
+        };
     }
 
     pub async fn remove_check(&mut self, check: Check) {
-        let a = self.producer.send(Command::new_remove_command(check)).await;
+        let a = self
+            .producer
+            .send(Command::new_remove_command(check.clone()))
+            .await;
+        match a {
+            Ok(_) => match a {
+                Ok(_) => info!("Check {} deleted from agent !", check.check_id),
+                Err(_) => error!("Check {} could not be deleted from agent.", check.check_id),
+            },
+            Err(_) => error!("Check {} could not be deleted from agent.", check.check_id),
+        }
     }
 }
