@@ -12,6 +12,10 @@ pub mod pulsar_client;
 pub mod tcp;
 /// warp10 related stuff
 pub mod warp10;
+// redis ping module
+pub mod redis;
+
+
 
 use env_logger::{Builder as Logger, Env};
 use futures::TryStreamExt;
@@ -19,6 +23,7 @@ use log::{error, info};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use tokio::{runtime, sync::mpsc};
+use redis::{RedisClient, RedisContext};
 
 pub use job::{JobRessources, JobsHandler};
 pub use pulsar_client::{PulsarClient, PulsarConnectionData};
@@ -62,11 +67,21 @@ pub async fn main_process(
     pulsar_connection_data: PulsarConnectionData,
     warp10_connection_data: Warp10ConnectionData,
     task_pools_size: usize,
+    redis_url: String, 
 ) -> Option<()> {
     let ressources = JobRessources::default();
     let (warp10_snd, warp10_rcv): (mpsc::Sender<warp10::Data>, mpsc::Receiver<warp10::Data>) =
         mpsc::channel(512);
     let mut handler = JobsHandler::new(ressources, warp10_snd, task_pools_size);
+
+    //adding redis functionnalities
+    /*
+    
+    let redis_client = RedisClient::new(&redis_url);  // Initialize Redis client with the URL
+    let redis_context = RedisContext::new("sample_key".to_string(), "sample_value".to_string());
+
+    */
+
 
     info!(
         "Connecting to pulsar topic {}...",
@@ -163,6 +178,9 @@ pub fn main() {
         warp10_token,
     };
 
+    let redis_url = env_get("REDIS_URL");
+
+
     let runtime = runtime::Builder::new_multi_thread()
         .worker_threads(job_number)
         .enable_all()
@@ -174,5 +192,6 @@ pub fn main() {
         pulsar_connection_data,
         warp_connection_data,
         task_pools_size,
+        redis_url, 
     ));
 }
