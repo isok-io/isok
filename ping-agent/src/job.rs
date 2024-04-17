@@ -152,6 +152,7 @@ impl Job {
             JobKind::Http(ctx) => Self::execute_http(&self.id, ctx.clone(), task_pool, resources, warp10_snd.clone()),
             JobKind::Redis(ctx) => Self::execute_redis(&self.id, ctx, task_pool, resources, warp10_snd.clone()),
         }
+        
     }
 }
 
@@ -159,6 +160,7 @@ impl From<CheckOutput> for Job {
     fn from(value: CheckOutput) -> Self {
         let kind = match value.kind {
             CheckKind::Http(http) => JobKind::Http(HttpContext::from(http)),
+            CheckKind::Redis(redis) => JobKind::Redis(RedisContext::from(redis)),
             _ => JobKind::Dummy,
         };
 
