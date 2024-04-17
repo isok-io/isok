@@ -182,6 +182,7 @@ pub struct DnsCheck {
     pub dns_server: Option<IpAddr>,
 }
 
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct IcmpCheck {
     host: Host,
@@ -271,6 +272,14 @@ pub struct HttpCheck {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RedisCheck {
+    pub connection_string: String,
+    pub command: String,
+    pub expected_response: Option<String>,
+}
+
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TcpCheck {
     pub host: Host,
     pub port: u16,
@@ -282,6 +291,7 @@ pub enum CheckKind {
     Icmp(IcmpCheck),
     Http(HttpCheck),
     Tcp(TcpCheck),
+    Redis(RedisCheck),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -16,6 +16,12 @@ pub enum CommandKind {
     Remove(Uuid),
 }
 
+pub enum RedisCommand {
+    Set { key: String, value: String },
+    Get { key: String },
+    Delete { key: String },
+}
+
 impl SerializeMessage for Command {
     fn serialize_message(input: Self) -> Result<Message, pulsar::Error> {
         serde_json::to_vec(&input)

@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 pub use ping_data::check::CheckKind;
 use ping_data::check::CheckOutput;
-
+use crate::redis::{RedisClient, RedisContext};
 pub use ping_data::pulsar_commands::Command;
 use ping_data::pulsar_commands::CommandKind;
 
@@ -22,12 +22,14 @@ use crate::warp10::Warp10Data;
 /// Ressources shared between jobs
 pub struct JobRessources {
     pub http_pool: MagicPool<HttpClient>,
+    pub redis_client: RedisClient,
 }
 
 impl Default for JobRessources {
     fn default() -> Self {
         JobRessources {
             http_pool: MagicPool::with_cappacity(1000, 20),
+            redis_client: RedisClient::new("redis://127.0.0.1/"),
         }
     }
 }
@@ -36,6 +38,7 @@ impl Default for JobRessources {
 #[derive(Debug, Clone)]
 pub enum JobKind {
     Http(HttpContext),
+    Redis(RedisContext),
     Dummy,
 }
 
@@ -103,6 +106,39 @@ impl Job {
         info!("Triggering check http {id} at {} ...", ctx.url());
         task_pool.spawn_pinned(|| process);
     }
+/// Execute a redis job
+    fn execute_redis(
+        id: &Uuid,
+        ctx: &RedisContext,
+        task_pool: &LocalPoolHandle,
+        resources: &JobRessources,
+        warp10_snd: mpsc::Sender<warp10::Data>,
+    ) {
+        let borrowed_id = id.clone();
+        let borrowed_ctx = ctx.clone();
+        let redis_client = &resources.redis_client;
+    
+        let process = async move {
+            let redis_result = redis_client.send_redis(&borrowed_ctx).await;
+            
+            match redis_result {
+                Some(res) => {
+                    for d in res.data(borrowed_id) {
+                        let _ =warp10_snd.send(d).await;
+                    }
+                    info!(
+                        "Redis check {borrowed_id} triggered with success: {} and response time: {} ms",
+                        res.success, res.process_time.as_millis()
+                    );
+                }
+                None => {
+                    info!("Redis check {borrowed_id} failed or timed out.");
+                }
+            };
+        };
+    
+        info!("Triggering Redis check {id} ");
+    }
 
     /// Execute a job
     pub fn execute(
@@ -113,9 +149,8 @@ impl Job {
     ) {
         match &self.kind {
             JobKind::Dummy => Self::execute_dummy(&self.id, task_pool),
-            JobKind::Http(ctx) => {
-                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, warp10_snd)
-            }
+            JobKind::Http(ctx) => Self::execute_http(&self.id, ctx.clone(), task_pool, resources, warp10_snd.clone()),
+            JobKind::Redis(ctx) => Self::execute_redis(&self.id, ctx, task_pool, resources, warp10_snd.clone()),
         }
     }
 }
