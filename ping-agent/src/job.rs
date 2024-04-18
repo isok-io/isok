@@ -8,10 +8,13 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio_util::task::LocalPoolHandle;
 use uuid::Uuid;
+use crate::config::REDIS_URL;
+
 
 pub use ping_data::check::CheckKind;
 use ping_data::check::CheckOutput;
 use crate::redis::{RedisClient, RedisContext};
+use ping_data::check::RedisCheck;
 pub use ping_data::pulsar_commands::Command;
 use ping_data::pulsar_commands::CommandKind;
 
@@ -22,14 +25,14 @@ use crate::warp10::Warp10Data;
 /// Ressources shared between jobs
 pub struct JobRessources {
     pub http_pool: MagicPool<HttpClient>,
-    pub redis_client: RedisClient,
+    pub redis_client: Arc<RedisClient>,
 }
 
 impl Default for JobRessources {
     fn default() -> Self {
         JobRessources {
             http_pool: MagicPool::with_cappacity(1000, 20),
-            redis_client: RedisClient::new("redis://127.0.0.1/"),
+            redis_client: Arc::new(RedisClient::new(&REDIS_URL)),
         }
     }
 }
@@ -107,41 +110,43 @@ impl Job {
         task_pool.spawn_pinned(|| process);
     }
 /// Execute a redis job
-    fn execute_redis(
-        id: &Uuid,
-        ctx: &RedisContext,
-        task_pool: &LocalPoolHandle,
-        resources: &JobRessources,
-        warp10_snd: mpsc::Sender<warp10::Data>,
-    ) {
-        let borrowed_id = id.clone();
-        let borrowed_ctx = ctx.clone();
-        let redis_client = &resources.redis_client;
-    
-        let process = async move {
-            let redis_result = redis_client.send_redis(&borrowed_ctx).await;
-            
-            match redis_result {
-                Some(res) => {
-                    for d in res.data(borrowed_id) {
-                        let _ =warp10_snd.send(d).await;
-                    }
-                    info!(
-                        "Redis check {borrowed_id} triggered with success: {} and response time: {} ms",
-                        res.success, res.process_time.as_millis()
-                    );
+fn execute_redis(
+    id: &Uuid,
+    ctx: &RedisContext,
+    task_pool: &LocalPoolHandle,
+    resources: &JobRessources,
+    warp10_snd: mpsc::Sender<warp10::Data>,
+) {
+    let borrowed_id = id.clone();
+    let borrowed_ctx = ctx.clone();
+    let redis_client = Arc::clone(&resources.redis_client);
+    let process = async move {
+        let redis_result = redis_client.send_redis(&borrowed_ctx).await;
+
+        match redis_result {
+            Some(res) => {
+                info!(
+                    "Redis check {borrowed_id} triggered with success = {}, response time = {} ms",
+                    res.success, res.process_time.as_millis()
+                );
+                for d in res.data(borrowed_id) {
+                    let _ = warp10_snd.send(d).await;
                 }
-                None => {
-                    info!("Redis check {borrowed_id} failed or timed out.");
-                }
-            };
+            }
+            None => {
+                error!("Redis check {borrowed_id} failed or timed out.");
+            }
         };
-    
-        info!("Triggering Redis check {id} ");
-    }
+    };
+
+    info!("Scheduling Redis check {borrowed_id}");
+    task_pool.spawn_pinned(|| process);
+}
+
+
 
     /// Execute a job
-    pub fn execute(
+pub fn execute(
         &self,
         task_pool: &LocalPoolHandle,
         resources: &mut JobRessources,
@@ -314,6 +319,22 @@ impl JobsHandler {
         match cmd.kind() {
             CommandKind::Add(a) => self.add_check(&a.check),
             CommandKind::Remove(id) => self.remove_check(id.clone()),
+            CommandKind::TriggerRedisCheck(key, value) => { 
+                let redis_check = RedisCheck {
+                    connection_string: key.to_string(),
+                    command: value.to_string(),
+                    expected_response: None, 
+                };
+                let check_output = CheckOutput {
+                    id: Uuid::new_v4(),
+                    kind: CheckKind::Redis(redis_check),
+                    interval: Duration::from_secs(30),
+                    max_latency: Duration::from_millis(100),  
+                    owner_id: Uuid::new_v4(),                 
+                    region: None,          
+                };
+                self.add_check(&check_output);
+            }
         }
     }
 

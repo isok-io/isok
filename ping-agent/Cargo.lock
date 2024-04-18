@@ -2211,6 +2211,7 @@ dependencies = [
  "futures",
  "log",
  "nom",
+ "once_cell",
  "ping-data",
  "poule",
  "pulsar",

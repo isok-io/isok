@@ -14,6 +14,7 @@ pub struct AddCommand {
 pub enum CommandKind {
     Add(AddCommand),
     Remove(Uuid),
+    TriggerRedisCheck(String, String),
 }
 
 pub enum RedisCommand {

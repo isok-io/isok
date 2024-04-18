@@ -14,14 +14,18 @@ pub mod tcp;
 pub mod warp10;
 //redis ping module
 pub mod redis;
+//configuration module
+pub mod config;
 
 use env_logger::{Builder as Logger, Env};
 use futures::TryStreamExt;
 use log::{error, info};
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::MutexGuard;
 use tokio::{runtime, sync::mpsc};
 use crate::redis::{RedisClient, RedisContext};
+use crate::config::{PULSAR_CONNECTION_DATA, WARP10_CONNECTION_DATA, REDIS_URL};
 
 pub use job::{JobRessources, JobsHandler};
 pub use pulsar_client::{PulsarClient, PulsarConnectionData};
@@ -167,32 +171,17 @@ pub fn main() {
     let job_number = env_get_num("JOBS", 1);
     let task_pools_size = env_get_num("TASK_POOLS_SIZE", 128);
 
-    let pulsar_address = env_get("PULSAR_ADDRESS");
-    let pulsar_token = env_get("PULSAR_TOKEN");
-    let pulsar_tenant = env_get("PULSAR_TENANT");
-    let pulsar_namespace = env_get("PULSAR_NAMESPACE");
-    let pulsar_topic = env_get("PULSAR_TOPIC");
-    let redis_url = env_get("REDIS_URL");
+    // Access the global configuration data safely
+    let pulsar_data: MutexGuard<PulsarConnectionData> = PULSAR_CONNECTION_DATA.lock().unwrap();
+    let warp_data: MutexGuard<Warp10ConnectionData> = WARP10_CONNECTION_DATA.lock().unwrap();
+    let redis_url = REDIS_URL.clone();
 
-    let pulsar_connection_data = PulsarConnectionData {
-        pulsar_address,
-        pulsar_token,
-        pulsar_tenant,
-        pulsar_namespace,
-        pulsar_topic,
-    };
+    // Clone the data out of the MutexGuard to use in async contexts
+    let pulsar_connection_data = pulsar_data.clone();
+    let warp_connection_data = warp_data.clone();
 
-    let warp10_address = env_get("WARP10_ADDRESS");
-    let warp10_token = env_get("WARP10_TOKEN");
-
-    let warp_connection_data = Warp10ConnectionData {
-        warp10_address,
-        warp10_token,
-    };
-
-
-
-    let runtime = runtime::Builder::new_multi_thread()
+    // Build the Tokio runtime
+    let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(job_number)
         .enable_all()
         .build()

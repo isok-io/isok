@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime};
 use time::OffsetDateTime;
 use uuid::Uuid;
 use crate::warp10::{Data, Value, warp10_data};
+use crate::config::REDIS_URL;
 
 /// Redis client, [`Client`] wrapper for storage in a structure 
 pub struct RedisClient {
@@ -14,7 +15,7 @@ pub struct RedisClient {
 impl RedisClient {
     pub fn new(url: &str) -> Self {
         let client = Client::open(url).expect("Failed to connect to Redis");
-        Self { client }
+        RedisClient { client }
     }
 
     pub async fn send_redis(&self, context: &RedisContext) -> Option<RedisResult> {
@@ -40,13 +41,13 @@ impl RedisClient {
 
 impl Default for RedisClient {
     fn default() -> Self {
-        Self::new("redis://127.0.0.1/")
+        Self::new(&REDIS_URL)
     }
 }
 
 impl Clone for RedisClient {
     fn clone(&self) -> Self {
-        Self::new("redis://127.0.0.1/")
+        Self::new(&REDIS_URL)
     }
 }
 

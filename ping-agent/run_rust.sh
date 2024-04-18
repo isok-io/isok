@@ -5,7 +5,9 @@ export PULSAR_NAMESPACE="pulsar_425ee406-fb80-4d7e-94ce-09ddb8856436";
 export TASK_POOLS_SIZE="128";
 export WARP10_ADDRESS="https://app-8ff7eebb-d65e-421d-99e9-f1bf575eba04.cleverapps.io/";
 export WARP10_TOKEN="KZ2w0q2AN29KmUGo9tPEPWU9D7oO2xg5LnyzubPDjmJ6TYN4k7L0qyW.abdu2xX3wxDt.oPrB8aj9lPod3hzodlJuN3mrm.8uNjIsioDqqkwWUpawBWWbk";
-export REDIS_URL="redis://127.0.0.1:6379";
 export PULSAR_TOPIC="isok";
+export REDIS_HOST="b3abxxnfcrrd9ndzjz2f-redis.services.clever-cloud.com";
+export REDIS_PASSWORD="cfq3ZbVFKtwHzw5dljE";
+export REDIS_PORT="3816";
 
 cargo run

@@ -315,7 +315,7 @@ impl Into<CheckOutput> for Check {
             kind: self.kind,
             max_latency: self.max_latency,
             interval: self.interval,
-            region: self.region,
+            region: Some(self.region),
         }
     }
 }
@@ -370,5 +370,5 @@ pub struct CheckOutput {
     pub kind: CheckKind,
     pub max_latency: Duration,
     pub interval: Duration,
-    pub region: String,
+    pub region: Option<String>,
 }
