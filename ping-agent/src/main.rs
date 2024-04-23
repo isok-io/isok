@@ -23,7 +23,7 @@ use log::{error, info};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::MutexGuard;
-use tokio::{runtime, sync::mpsc};
+use tokio::sync::mpsc;
 use crate::redis::{RedisClient, RedisContext};
 use crate::config::{PULSAR_CONNECTION_DATA, WARP10_CONNECTION_DATA, REDIS_URL};
 
@@ -67,14 +67,17 @@ pub fn init_logger() {
 }
 
 async fn use_redis(redis_url: &str) {
+    info!("Initializing Redis client with URL: {}", redis_url);
     let redis_client = RedisClient::new(redis_url);
     let redis_context = RedisContext::new("sample_key".to_string(), "sample_value".to_string());
 
+    info!("Sending data to Redis...");
     match redis_client.send_redis(&redis_context).await {
         Some(result) => println!("Redis send success: {}, at: {}", result.success, result.datetime),
         None => println!("Failed to send data to Redis"),
     }
 }
+
 /// Main async process : pulsar consumer loop
 pub async fn main_process(
     pulsar_connection_data: PulsarConnectionData,
@@ -86,6 +89,8 @@ pub async fn main_process(
     let (warp10_snd, warp10_rcv): (mpsc::Sender<warp10::Data>, mpsc::Receiver<warp10::Data>) =
         mpsc::channel(512);
     let mut handler = JobsHandler::new(ressources, warp10_snd, task_pools_size);
+
+    use_redis(&redis_url).await;
 
     // Redis client initialization
     let redis_client = RedisClient::new(&redis_url);
@@ -124,7 +129,7 @@ pub async fn main_process(
             std::process::exit(1);
         }
     };
-
+    
     tokio::task::spawn(warp10::warp10_sender(warp10_client, warp10_rcv, 10));
 
     while let Some(msg) = pulsar_client

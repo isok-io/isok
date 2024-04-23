@@ -81,7 +81,10 @@ impl Job {
             match http_result {
                 Some(res) => {
                     for d in res.data(borowed_id.clone()) {
-                        warp10_snd.send(d).await;
+                        match warp10_snd.send(d).await{
+                            Ok(_) => {} // Success case, do nothing or add success handling if needed
+                            Err(e) => warn!("Failed to send data: {:?}", e), // Log the error
+                        }
                     }
 
                     info!(
@@ -98,7 +101,11 @@ impl Job {
                     };
 
                     for d in res.data(borowed_id.clone()) {
-                        warp10_snd.send(d).await;
+                        match warp10_snd.send(d).await{
+                            Ok(_) => {} // Success case, do nothing or add success handling if needed
+                            Err(e) => warn!("Failed to send data: {:?}", e), // Log the error
+                        }
+                        
                     }
 
                     info!("Check http {borowed_id} has been trigerred and timed out.");
