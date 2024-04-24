@@ -1,8 +1,9 @@
-use log::{error, info, warn};
-use slab::Slab;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
+
+use log::{error, info, warn};
+use slab::Slab;
 use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -11,10 +12,9 @@ use uuid::Uuid;
 
 pub use ping_data::check::CheckKind;
 use ping_data::check::CheckOutput;
-
 pub use ping_data::pulsar_commands::Command;
 use ping_data::pulsar_commands::CommandKind;
-use ping_data::pulsar_messages::{CheckData, CheckType};
+use ping_data::pulsar_messages::{CheckMessage, CheckResult, CheckType};
 
 use crate::http::{HttpClient, HttpContext, HttpResult};
 use crate::magic_pool::MagicPool;
@@ -64,7 +64,7 @@ impl Job {
         ctx: HttpContext,
         task_pool: &LocalPoolHandle,
         resources: &mut JobResources,
-        pulsar_sender: mpsc::Sender<CheckData>,
+        pulsar_sender: mpsc::Sender<CheckMessage>,
     ) {
         let borrowed_id = id.clone();
         let borrowed_req = ctx.clone().into();
@@ -72,19 +72,17 @@ impl Job {
 
         let process = async move {
             let http_result = checkout.run(borrowed_req).await;
-            let check_data = CheckData::new(
-                CheckType::Http,
-                borrowed_id,
-                http_result.into(),
-            );
-
-            pulsar_sender.send(check_data).await;
 
             info!(
-                "Check http {borowed_id} has been trigerred with status {} and response time {} !",
+                "Check http {borrowed_id} has been trigerred with status {} and response time {} !",
                 http_result.status,
                 http_result.request_time.as_millis()
             );
+
+            let check_result: CheckResult = http_result.into();
+            let check_message: CheckMessage = check_result.to_message(borrowed_id);
+
+            pulsar_sender.send(check_message).await;
         };
 
         info!("Triggering check http {id} at {} ...", ctx.url());
@@ -96,7 +94,7 @@ impl Job {
         &self,
         task_pool: &LocalPoolHandle,
         resources: &mut JobResources,
-        pulsar_sender: mpsc::Sender<CheckData>,
+        pulsar_sender: mpsc::Sender<CheckMessage>,
     ) {
         match &self.kind {
             JobKind::Dummy => Self::execute_dummy(&self.id, task_pool),
@@ -137,7 +135,7 @@ impl JobScheduler {
         range: usize,
         wait: Duration,
         resources: Arc<Mutex<JobResources>>,
-        pulsar_sender: mpsc::Sender<CheckData>,
+        pulsar_sender: mpsc::Sender<CheckMessage>,
         task_pool_size: usize,
     ) -> Self {
         let jobs = {
@@ -154,7 +152,7 @@ impl JobScheduler {
 
         let process = async move {
             let task_pool = LocalPoolHandle::new(task_pool_size);
-            let pulsar_sender: mpsc::Sender<CheckData> = pulsar_sender;
+            let pulsar_sender: mpsc::Sender<CheckMessage> = pulsar_sender;
             let mut time_cursor = 0;
 
             loop {
@@ -242,13 +240,13 @@ pub struct JobsHandler {
     checks: HashMap<Uuid, JobLocation>,
     jobs: HashMap<Duration, JobScheduler>,
     scheduler_task_pool_size: usize,
-    pulsar_sender: mpsc::Sender<CheckData>,
+    pulsar_sender: mpsc::Sender<CheckMessage>,
 }
 
 impl JobsHandler {
     pub fn new(
         resources: JobResources,
-        pulsar_sender: mpsc::Sender<CheckData>,
+        pulsar_sender: mpsc::Sender<CheckMessage>,
         scheduler_task_pool_size: usize,
     ) -> Self {
         Self {

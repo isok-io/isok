@@ -1,3 +1,15 @@
+use std::net::SocketAddr;
+use std::str::FromStr;
+
+use env_logger::{Builder as Logger, Env};
+use futures::TryStreamExt;
+use log::{error, info};
+use tokio::{runtime, sync::mpsc};
+
+pub use job::{JobResources, JobsHandler};
+use ping_data::pulsar_messages::{CheckMessage, CheckResult, CheckType};
+pub use pulsar_client::{PulsarClient, PulsarConnectionData};
+
 /// http ping module
 pub mod http;
 /// icmp ping module
@@ -11,18 +23,6 @@ pub mod pulsar_client;
 /// tcp ping module
 pub mod tcp;
 mod sink;
-
-use env_logger::{Builder as Logger, Env};
-use futures::TryStreamExt;
-use log::{error, info};
-use std::net::SocketAddr;
-use std::str::FromStr;
-use tokio::{runtime, sync::mpsc};
-
-pub use job::{JobResources, JobsHandler};
-use ping_data::check_result::CheckResultMessage;
-use ping_data::pulsar_messages::CheckData;
-pub use pulsar_client::{PulsarClient, PulsarConnectionData};
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -63,7 +63,7 @@ pub async fn main_process(
     task_pools_size: usize,
 ) -> Option<()> {
     let resources = JobResources::default();
-    let (pulsar_sender, pulsar_receiver): (mpsc::Sender<CheckData>, mpsc::Receiver<CheckData>) =
+    let (pulsar_sender, pulsar_receiver): (mpsc::Sender<CheckMessage>, mpsc::Receiver<CheckMessage>) =
         mpsc::channel(512);
     let mut handler = JobsHandler::new(resources, pulsar_sender, task_pools_size);
 
@@ -82,7 +82,18 @@ pub async fn main_process(
         }
     };
 
-    tokio::task::spawn(sink::pulsar_sink(pulsar_client, pulsar_receiver));
+    let http_producer = match pulsar_client.create_producer(CheckType::Http).await {
+        Some(producer) => {
+            info!("Connected to pulsar topic !");
+            producer
+        }
+        None => {
+            error!("Failed to connect to pulsar topic");
+            std::process::exit(1);
+        }
+    };
+
+    tokio::task::spawn(sink::pulsar_sink(http_producer, pulsar_receiver));
 
     while let Some(msg) = pulsar_client
         .consumer

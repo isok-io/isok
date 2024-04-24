@@ -27,15 +27,7 @@ impl SerializeMessage for CheckMessage {
     }
 }
 
-impl CheckMessage {
-    fn to_data(&self, kind: CheckType) -> CheckData {
-        CheckData {
-            kind,
-            data: self.clone(),
-        }
-    }
-}
-
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum CheckType {
     Http
 }
@@ -70,17 +62,6 @@ impl FromStr for CheckType {
     }
 }
 
-pub struct CheckData {
-    pub kind: CheckType,
-    pub data: CheckMessage,
-}
-
-impl CheckData {
-    pub fn new(kind: CheckType, check_id: Uuid, result: CheckResult) -> Self {
-        result.to_message(check_id).to_data(kind)
-    }
-}
-
 pub struct CheckResult {
     pub timestamp: OffsetDateTime,
     pub latency: Duration,
@@ -88,7 +69,7 @@ pub struct CheckResult {
 }
 
 impl CheckResult {
-    fn to_message(&self, check_id: Uuid) -> CheckMessage {
+    pub fn to_message(&self, check_id: Uuid) -> CheckMessage {
         CheckMessage {
             check_id,
             timestamp: self.timestamp,
