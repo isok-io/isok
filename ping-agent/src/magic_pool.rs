@@ -9,10 +9,10 @@ pub struct MagicPool<T: Default + Clone> {
 
 impl<T: Default + Clone> MagicPool<T> {
     pub fn new(grow_factor: usize) -> Self {
-        Self::with_cappacity(grow_factor * 10, grow_factor)
+        Self::with_capacity(grow_factor * 10, grow_factor)
     }
 
-    pub fn with_cappacity(capacity: usize, grow_factor: usize) -> Self {
+    pub fn with_capacity(capacity: usize, grow_factor: usize) -> Self {
         MagicPool {
             grow_factor,
             pool: Pool::with_capacity(capacity),

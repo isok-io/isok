@@ -14,20 +14,20 @@ use ping_data::check::CheckOutput;
 
 pub use ping_data::pulsar_commands::Command;
 use ping_data::pulsar_commands::CommandKind;
+use ping_data::pulsar_messages::{CheckData, CheckType};
 
 use crate::http::{HttpClient, HttpContext, HttpResult};
 use crate::magic_pool::MagicPool;
-use crate::warp10::Warp10Data;
 
 /// Ressources shared between jobs
-pub struct JobRessources {
+pub struct JobResources {
     pub http_pool: MagicPool<HttpClient>,
 }
 
-impl Default for JobRessources {
+impl Default for JobResources {
     fn default() -> Self {
-        JobRessources {
-            http_pool: MagicPool::with_cappacity(1000, 20),
+        JobResources {
+            http_pool: MagicPool::with_capacity(1000, 20),
         }
     }
 }
@@ -63,41 +63,28 @@ impl Job {
         id: &Uuid,
         ctx: HttpContext,
         task_pool: &LocalPoolHandle,
-        resources: &mut JobRessources,
-        warp10_snd: mpsc::Sender<warp10::Data>,
+        resources: &mut JobResources,
+        pulsar_sender: mpsc::Sender<CheckData>,
     ) {
-        let borowed_id = id.clone();
-        let borowed_req = ctx.clone().into();
+        let borrowed_id = id.clone();
+        let borrowed_req = ctx.clone().into();
         let checkout = resources.http_pool.get();
+
         let process = async move {
-            let http_result = checkout.send(borowed_req).await;
+            let http_result = checkout.run(borrowed_req).await;
+            let check_data = CheckData::new(
+                CheckType::Http,
+                borrowed_id,
+                http_result.into(),
+            );
 
-            match http_result {
-                Some(res) => {
-                    for d in res.data(borowed_id.clone()) {
-                        warp10_snd.send(d).await;
-                    }
+            pulsar_sender.send(check_data).await;
 
-                    info!(
-                        "Check http {borowed_id} has been trigerred with status {} and response time {} !",
-                        res.status
-                        , res.request_time.as_millis()
-                    );
-                }
-                None => {
-                    let res = HttpResult {
-                        datetime: OffsetDateTime::now_utc(),
-                        request_time: Duration::from_millis(i64::MAX as u64),
-                        status: 500,
-                    };
-
-                    for d in res.data(borowed_id.clone()) {
-                        warp10_snd.send(d).await;
-                    }
-
-                    info!("Check http {borowed_id} has been trigerred and timed out.");
-                }
-            };
+            info!(
+                "Check http {borowed_id} has been trigerred with status {} and response time {} !",
+                http_result.status,
+                http_result.request_time.as_millis()
+            );
         };
 
         info!("Triggering check http {id} at {} ...", ctx.url());
@@ -108,13 +95,13 @@ impl Job {
     pub fn execute(
         &self,
         task_pool: &LocalPoolHandle,
-        resources: &mut JobRessources,
-        warp10_snd: mpsc::Sender<warp10::Data>,
+        resources: &mut JobResources,
+        pulsar_sender: mpsc::Sender<CheckData>,
     ) {
         match &self.kind {
             JobKind::Dummy => Self::execute_dummy(&self.id, task_pool),
             JobKind::Http(ctx) => {
-                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, warp10_snd)
+                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, pulsar_sender)
             }
         }
     }
@@ -149,8 +136,8 @@ impl JobScheduler {
     pub fn new(
         range: usize,
         wait: Duration,
-        resources: Arc<Mutex<JobRessources>>,
-        warp10_snd: mpsc::Sender<warp10::Data>,
+        resources: Arc<Mutex<JobResources>>,
+        pulsar_sender: mpsc::Sender<CheckData>,
         task_pool_size: usize,
     ) -> Self {
         let jobs = {
@@ -167,7 +154,7 @@ impl JobScheduler {
 
         let process = async move {
             let task_pool = LocalPoolHandle::new(task_pool_size);
-            let warp10_snd: mpsc::Sender<warp10::Data> = warp10_snd;
+            let pulsar_sender: mpsc::Sender<CheckData> = pulsar_sender;
             let mut time_cursor = 0;
 
             loop {
@@ -175,7 +162,7 @@ impl JobScheduler {
                 if let Ok(mut jl) = job_list.lock() {
                     for (_, j) in &mut jl[time_cursor] {
                         if let Ok(mut resources) = resources.lock() {
-                            j.execute(&task_pool, &mut resources, warp10_snd.clone())
+                            j.execute(&task_pool, &mut resources, pulsar_sender.clone())
                         }
                     }
                 }
@@ -249,19 +236,19 @@ impl JobScheduler {
     }
 }
 
-/// App main state handling pulsar commands ([`Command`]), storing jobs ([`Job`]) and job ressources ([`JobRessources`])
+/// App main state handling pulsar commands ([`Command`]), storing jobs ([`Job`]) and job ressources ([`JobResources`])
 pub struct JobsHandler {
-    resources: Arc<Mutex<JobRessources>>,
+    resources: Arc<Mutex<JobResources>>,
     checks: HashMap<Uuid, JobLocation>,
     jobs: HashMap<Duration, JobScheduler>,
     scheduler_task_pool_size: usize,
-    warp10_snd: mpsc::Sender<warp10::Data>,
+    pulsar_sender: mpsc::Sender<CheckData>,
 }
 
 impl JobsHandler {
     pub fn new(
-        resources: JobRessources,
-        warp10_snd: mpsc::Sender<warp10::Data>,
+        resources: JobResources,
+        pulsar_sender: mpsc::Sender<CheckData>,
         scheduler_task_pool_size: usize,
     ) -> Self {
         Self {
@@ -269,7 +256,7 @@ impl JobsHandler {
             checks: HashMap::new(),
             jobs: HashMap::new(),
             scheduler_task_pool_size,
-            warp10_snd,
+            pulsar_sender,
         }
     }
 
@@ -290,7 +277,7 @@ impl JobsHandler {
                     frequency.as_secs() as usize,
                     Duration::from_secs(1),
                     Arc::clone(&self.resources),
-                    self.warp10_snd.clone(),
+                    self.pulsar_sender.clone(),
                     self.scheduler_task_pool_size,
                 ),
             );
