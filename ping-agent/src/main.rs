@@ -22,7 +22,7 @@ pub mod magic_pool;
 pub mod pulsar_client;
 /// tcp ping module
 pub mod tcp;
-mod pulsar_source;
+mod pulsar_sink;
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -94,7 +94,7 @@ pub async fn main_process(
         }
     };
 
-    tokio::task::spawn(pulsar_source::pulsar_sink(http_producer, pulsar_receiver));
+    tokio::task::spawn(pulsar_sink::pulsar_sink(http_producer, pulsar_receiver));
 
     while let Some(msg) = pulsar_client
         .consumer
