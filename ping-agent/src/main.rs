@@ -22,7 +22,7 @@ pub mod magic_pool;
 pub mod pulsar_client;
 /// tcp ping module
 pub mod tcp;
-mod sink;
+mod pulsar_source;
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -61,6 +61,7 @@ pub fn init_logger() {
 pub async fn main_process(
     pulsar_connection_data: PulsarConnectionData,
     task_pools_size: usize,
+    agent_id: String
 ) -> Option<()> {
     let resources = JobResources::default();
     let (pulsar_sender, pulsar_receiver): (mpsc::Sender<CheckMessage>, mpsc::Receiver<CheckMessage>) =
@@ -93,7 +94,7 @@ pub async fn main_process(
         }
     };
 
-    tokio::task::spawn(sink::pulsar_sink(http_producer, pulsar_receiver));
+    tokio::task::spawn(pulsar_source::pulsar_sink(http_producer, pulsar_receiver));
 
     while let Some(msg) = pulsar_client
         .consumer
@@ -145,6 +146,8 @@ pub fn main() {
     let pulsar_namespace = env_get("PULSAR_NAMESPACE");
     let pulsar_topic = env_get("PULSAR_TOPIC");
 
+    let agent_id = env_get("AGENT_ID");
+
     let pulsar_connection_data = PulsarConnectionData {
         pulsar_address,
         pulsar_token,
@@ -163,5 +166,6 @@ pub fn main() {
     runtime.block_on(main_process(
         pulsar_connection_data,
         task_pools_size,
+        agent_id
     ));
 }

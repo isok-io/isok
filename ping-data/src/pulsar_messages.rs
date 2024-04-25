@@ -11,6 +11,7 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CheckMessage {
     pub check_id: Uuid,
+    pub agent_id: String,
     pub timestamp: OffsetDateTime,
     pub latency: Duration,
     pub fields: HashMap<String, String>,
@@ -69,9 +70,10 @@ pub struct CheckResult {
 }
 
 impl CheckResult {
-    pub fn to_message(&self, check_id: Uuid) -> CheckMessage {
+    pub fn to_message(&self, check_id: Uuid, agent_id: String) -> CheckMessage {
         CheckMessage {
             check_id,
+            agent_id,
             timestamp: self.timestamp,
             latency: self.latency,
             fields: self.fields.clone(),

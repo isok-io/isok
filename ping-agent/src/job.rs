@@ -65,6 +65,7 @@ impl Job {
         task_pool: &LocalPoolHandle,
         resources: &mut JobResources,
         pulsar_sender: mpsc::Sender<CheckMessage>,
+        agent_id: String,
     ) {
         let borrowed_id = id.clone();
         let borrowed_req = ctx.clone().into();
@@ -80,7 +81,7 @@ impl Job {
             );
 
             let check_result: CheckResult = http_result.into();
-            let check_message: CheckMessage = check_result.to_message(borrowed_id);
+            let check_message: CheckMessage = check_result.to_message(borrowed_id, agent_id);
 
             pulsar_sender.send(check_message).await;
         };
@@ -95,11 +96,12 @@ impl Job {
         task_pool: &LocalPoolHandle,
         resources: &mut JobResources,
         pulsar_sender: mpsc::Sender<CheckMessage>,
+        agent_id: String,
     ) {
         match &self.kind {
             JobKind::Dummy => Self::execute_dummy(&self.id, task_pool),
             JobKind::Http(ctx) => {
-                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, pulsar_sender)
+                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, pulsar_sender, agent_id)
             }
         }
     }
@@ -137,6 +139,7 @@ impl JobScheduler {
         resources: Arc<Mutex<JobResources>>,
         pulsar_sender: mpsc::Sender<CheckMessage>,
         task_pool_size: usize,
+        agent_id: String,
     ) -> Self {
         let jobs = {
             let mut res: Vec<Slab<Job>> = Vec::with_capacity(range);
@@ -160,7 +163,7 @@ impl JobScheduler {
                 if let Ok(mut jl) = job_list.lock() {
                     for (_, j) in &mut jl[time_cursor] {
                         if let Ok(mut resources) = resources.lock() {
-                            j.execute(&task_pool, &mut resources, pulsar_sender.clone())
+                            j.execute(&task_pool, &mut resources, pulsar_sender.clone(), agent_id.clone())
                         }
                     }
                 }
@@ -241,6 +244,7 @@ pub struct JobsHandler {
     jobs: HashMap<Duration, JobScheduler>,
     scheduler_task_pool_size: usize,
     pulsar_sender: mpsc::Sender<CheckMessage>,
+    agent_id: String,
 }
 
 impl JobsHandler {
@@ -248,6 +252,7 @@ impl JobsHandler {
         resources: JobResources,
         pulsar_sender: mpsc::Sender<CheckMessage>,
         scheduler_task_pool_size: usize,
+        agent_id: String,
     ) -> Self {
         Self {
             resources: Arc::new(Mutex::new(resources)),
@@ -255,6 +260,7 @@ impl JobsHandler {
             jobs: HashMap::new(),
             scheduler_task_pool_size,
             pulsar_sender,
+            agent_id,
         }
     }
 
@@ -277,6 +283,7 @@ impl JobsHandler {
                     Arc::clone(&self.resources),
                     self.pulsar_sender.clone(),
                     self.scheduler_task_pool_size,
+                    self.agent_id.clone(),
                 ),
             );
         }

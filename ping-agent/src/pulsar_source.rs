@@ -1,4 +1,3 @@
-use log::info;
 use pulsar::{Producer, TokioExecutor};
 use tokio::sync::mpsc::Receiver;
 
