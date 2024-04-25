@@ -21,3 +21,4 @@ futures = "0.3.29"
 slab = "0.4.9"
 tokio-util = { version = "0.7.10", features = ["rt"] }
 time = "0.3.30"
+serde = { version = "1.0.195", features = ["derive"] }

@@ -1,15 +1,14 @@
 use log::error;
 use ping_data::check::HttpCheck;
-use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue},
-    Client, Method, Request, Url,
-};
+use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, Client, Method, Request, Url, StatusCode};
 use std::collections::HashMap;
 use std::time::Duration;
 use nom::AsBytes;
 use time::OffsetDateTime;
 use uuid::Uuid;
 use ping_data::pulsar_messages::{CheckMessage, CheckResult};
+use serde::{Deserialize, Serialize};
+use ping_data::check_kinds::http::HttpFields;
 
 /// Http client, [`Client`] wrapper for storage in a [MagicPool](crate::magic_pool::MagicPool)
 pub struct HttpClient {
@@ -123,18 +122,12 @@ pub struct HttpResult {
     pub status: u16,
 }
 
-impl Into<CheckResult> for HttpResult {
-    fn into(self) -> CheckResult {
-        let mut fields = HashMap::with_capacity(1);
-        fields.insert(
-            "status_code".to_string(),
-            self.status.to_string(),
-        );
-
+impl Into<CheckResult<HttpFields>> for HttpResult {
+    fn into(self) -> CheckResult<HttpFields> {
         CheckResult {
             timestamp: self.datetime,
             latency: self.request_time,
-            fields,
+            fields: HttpFields::new(self.status),
         }
     }
 }

@@ -25,3 +25,6 @@ pulsar = "6.1.0"
 ping-data = { path = "../ping-data" }
 log = "0.4.20"
 biscuit-auth = "4.0.0"
+time = { version = "0.3.36", features = ["serde"] }
+warp10 = { version = "2.0.0" }
+futures = "0.3.29"

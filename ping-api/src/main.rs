@@ -1,6 +1,7 @@
 pub mod api;
 pub mod db;
 pub mod pulsar;
+mod sink;
 
 use api::ApiHandler;
 use db::DbHandler;

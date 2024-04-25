@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 pub use ping_data::check::CheckKind;
 use ping_data::check::CheckOutput;
+use ping_data::check_kinds::http::HttpFields;
 pub use ping_data::pulsar_commands::Command;
 use ping_data::pulsar_commands::CommandKind;
 use ping_data::pulsar_messages::{CheckMessage, CheckResult, CheckType};
@@ -80,10 +81,10 @@ impl Job {
                 http_result.request_time.as_millis()
             );
 
-            let check_result: CheckResult = http_result.into();
+            let check_result: CheckResult<HttpFields> = http_result.into();
             let check_message: CheckMessage = check_result.to_message(borrowed_id, agent_id);
 
-            pulsar_sender.send(check_message).await;
+            let _ = pulsar_sender.send(check_message).await;
         };
 
         info!("Triggering check http {id} at {} ...", ctx.url());

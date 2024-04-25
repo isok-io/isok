@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter, write};
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::time::Duration;
 use pulsar::producer::Message;
-use pulsar::{Error, SerializeMessage};
+use pulsar::{DeserializeMessage, Error, Payload, SerializeMessage};
 use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -14,7 +14,7 @@ pub struct CheckMessage {
     pub agent_id: String,
     pub timestamp: OffsetDateTime,
     pub latency: Duration,
-    pub fields: HashMap<String, String>,
+    pub fields: serde_json::Value,
 }
 
 impl SerializeMessage for CheckMessage {
@@ -25,6 +25,15 @@ impl SerializeMessage for CheckMessage {
             payload,
             ..Default::default()
         })
+    }
+}
+
+impl DeserializeMessage for CheckMessage {
+    type Output = Result<CheckMessage, pulsar::Error>;
+
+    fn deserialize_message(payload: &Payload) -> Self::Output {
+        serde_json::from_slice(payload.data.as_slice())
+            .map_err(|e| pulsar::Error::Custom(e.to_string()))
     }
 }
 
@@ -63,20 +72,40 @@ impl FromStr for CheckType {
     }
 }
 
-pub struct CheckResult {
+pub struct CheckResult<A: Serialize + DeserializeOwned> {
     pub timestamp: OffsetDateTime,
     pub latency: Duration,
-    pub fields: HashMap<String, String>,
+    pub fields: A,
 }
 
-impl CheckResult {
+impl<A: Serialize + DeserializeOwned> CheckResult<A> {
     pub fn to_message(&self, check_id: Uuid, agent_id: String) -> CheckMessage {
         CheckMessage {
             check_id,
             agent_id,
             timestamp: self.timestamp,
             latency: self.latency,
-            fields: self.fields.clone(),
+            fields: serde_json::to_value(&self.fields).unwrap(), //cannot fail
+        }
+    }
+}
+
+pub struct CheckData<A: Serialize + DeserializeOwned> {
+    pub check_id: Uuid,
+    pub agent_id: String,
+    pub timestamp: OffsetDateTime,
+    pub latency: Duration,
+    pub fields: A,
+}
+
+impl<A: Serialize + DeserializeOwned> Into<CheckData<A>> for CheckMessage {
+    fn into(self) -> CheckData<A> {
+        CheckData {
+            check_id: self.check_id,
+            agent_id: self.agent_id,
+            timestamp: self.timestamp,
+            latency: self.latency,
+            fields: serde_json::from_value(self.fields).unwrap(), //cannot fail
         }
     }
 }
