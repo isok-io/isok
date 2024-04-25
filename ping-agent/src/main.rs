@@ -66,7 +66,7 @@ pub async fn main_process(
     let resources = JobResources::default();
     let (pulsar_sender, pulsar_receiver): (mpsc::Sender<CheckMessage>, mpsc::Receiver<CheckMessage>) =
         mpsc::channel(512);
-    let mut handler = JobsHandler::new(resources, pulsar_sender, task_pools_size);
+    let mut handler = JobsHandler::new(resources, pulsar_sender, task_pools_size, agent_id);
 
     info!(
         "Connecting to pulsar topic {}...",
