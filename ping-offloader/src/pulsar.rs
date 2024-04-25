@@ -4,14 +4,22 @@ use futures::TryStreamExt;
 use pulsar::{Authentication, Consumer, ConsumerOptions, DeserializeMessage, Error, Pulsar, SubType, TokioExecutor};
 use pulsar::consumer::InitialPosition;
 use time::OffsetDateTime;
-use uuid::Uuid;
 use ping_data::pulsar_messages::{CheckData, CheckMessage};
-use crate::db::DbHandler;
-use crate::pulsar::PulsarConnectionData;
 use warp10::{Client, Data as Warp10Data, Label, Value};
 use ping_data::check_kinds::http::HttpFields;
+use uuid::Uuid;
 
-fn pulsar_http_topic(connection_data: &PulsarConnectionData) -> String {
+
+/// Pulsar connection data, passed by env vars
+#[derive(Debug, Clone)]
+pub struct PulsarConnectionData {
+    pub pulsar_address: String,
+    pub pulsar_token: String,
+    pub pulsar_tenant: String,
+    pub pulsar_namespace: String,
+}
+
+pub fn pulsar_http_topic(connection_data: &PulsarConnectionData) -> String {
     format!(
         "persistent://{}/{}/http",
         connection_data.pulsar_tenant,
@@ -19,7 +27,7 @@ fn pulsar_http_topic(connection_data: &PulsarConnectionData) -> String {
     )
 }
 
-struct PulsarHttpSource {
+pub struct PulsarHttpSource {
     consumer: Consumer<CheckMessage, TokioExecutor>,
 }
 
@@ -56,18 +64,34 @@ impl PulsarHttpSource {
     }
 }
 
-struct Warp10Client {
+/// Warp10 connection data, passed by env vars
+#[derive(Debug, Clone)]
+pub struct Warp10ConnectionData {
+    pub warp10_address: String,
+    pub warp10_token: String,
+}
+
+
+pub struct Warp10Client {
     client: Client,
     token: String,
 }
 
-struct Warp10HttpSink {
+impl Warp10Client {
+    pub fn new(connection_data: Warp10ConnectionData) -> Option<Self> {
+        Some(Self {
+            client: Client::new(connection_data.warp10_address.as_str()).ok()?,
+            token: connection_data.warp10_address,
+        })
+    }
+}
+
+pub struct Warp10HttpSink {
     warp10_client: Warp10Client,
-    database_client: DbHandler,
     pulsar_http_source: PulsarHttpSource,
 }
 
-pub fn warp10_data(check_message: CheckData<HttpFields>, name: &str, value: Value) -> Warp10Data {
+pub fn warp10_data(check_message: &CheckData<HttpFields>, name: &str, value: Value) -> Warp10Data {
     Warp10Data::new(
         check_message.timestamp,
         None,
@@ -84,21 +108,19 @@ pub fn warp10_data(check_message: CheckData<HttpFields>, name: &str, value: Valu
 }
 
 impl Warp10HttpSink {
-    pub fn new(warp10_client: Warp10Client,
-               database_client: DbHandler,
-               pulsar_http_source: PulsarHttpSource) -> Self {
-        Self { warp10_client, database_client, pulsar_http_source }
+    pub fn new(warp10_client: Warp10Client, pulsar_http_source: PulsarHttpSource) -> Self {
+        Self { warp10_client, pulsar_http_source }
     }
 
     pub fn data(check_data: CheckData<HttpFields>) -> Vec<Warp10Data> {
         vec![
             warp10_data(
-                check_data,
+                &check_data,
                 "http_request_time",
                 Value::Long(check_data.latency.as_millis() as i64),
             ),
             warp10_data(
-                check_data,
+                &check_data,
                 "http_request_status",
                 Value::Int(check_data.fields.status_code as i32),
             ),
