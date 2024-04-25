@@ -1,4 +1,5 @@
 use std::fmt::format;
+use futures::future::err;
 use log::{error, info};
 use futures::TryStreamExt;
 use pulsar::{Authentication, Consumer, ConsumerOptions, DeserializeMessage, Error, Pulsar, SubType, TokioExecutor};
@@ -137,15 +138,27 @@ impl Warp10HttpSink {
     pub async fn run(mut self) {
         while let Some(message) = self.pulsar_http_source.consumer.try_next().await.ok().flatten() {
             let check_data: CheckData<HttpFields> = match message.deserialize() {
-                Ok(data) => data.into(),
+                Ok(data) => {
+                    info!("received a message from {} of check {}", data.agent_id, data.check_id);
+                    data.into()
+                }
                 Err(e) => {
                     error!("could not deserialize message: {:?}", e);
-                    break;
+                    continue;
                 }
             };
 
             let warp10_data = Self::data(check_data);
-            let _ = self.send(warp10_data).await;
+            let _ = match self.send(warp10_data).await {
+                None => {
+                    error!("failed to send data to warp10");
+                    continue;
+                }
+                Some(_) => {
+                    info!("data sent to warp10")
+                }
+            };
+
             let _ = self.pulsar_http_source.consumer.ack(&message).await;
         }
     }
