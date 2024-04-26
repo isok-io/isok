@@ -45,7 +45,7 @@ impl PulsarHttpSource {
             client.consumer()
                 .with_topic(pulsar_http_topic(connection_data))
                 .with_subscription_type(SubType::Exclusive)
-                .with_consumer_name("consumer")
+                .with_consumer_name("warp10-http-sink")
                 .with_subscription(&connection_data.subscription_uuid)
                 .with_options(ConsumerOptions {
                     durable: Some(true),

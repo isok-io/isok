@@ -88,7 +88,7 @@ async fn main() {
         }
     };
 
-    let mut warp10_http_sink = Warp10HttpSink::new(warp10_client, pulsar_source);
+    let warp10_http_sink = Warp10HttpSink::new(warp10_client, pulsar_source);
 
     tokio::task::spawn(warp10_http_sink.run());
 }
