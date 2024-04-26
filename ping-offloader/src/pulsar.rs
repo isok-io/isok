@@ -149,6 +149,7 @@ impl Warp10HttpSink {
                 }
                 Err(e) => {
                     error!("could not deserialize message: {:?}", e);
+                    let _ = self.pulsar_http_source.consumer.ack(&message).await;
                     continue;
                 }
             };
