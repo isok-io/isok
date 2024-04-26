@@ -5,7 +5,6 @@ use pulsar::consumer::InitialPosition;
 use ping_data::pulsar_messages::{CheckData, CheckMessage};
 use warp10::{Client, Data as Warp10Data, Label, Value};
 use ping_data::check_kinds::http::HttpFields;
-use uuid::Uuid;
 
 
 /// Pulsar connection data, passed by env vars
@@ -15,6 +14,7 @@ pub struct PulsarConnectionData {
     pub pulsar_token: String,
     pub pulsar_tenant: String,
     pub pulsar_namespace: String,
+    pub subscription_uuid: String,
 }
 
 pub fn pulsar_http_topic(connection_data: &PulsarConnectionData) -> String {
@@ -40,16 +40,16 @@ impl PulsarHttpSource {
             .await
             .ok()?;
 
-        let subscription_uuid = Uuid::new_v4().hyphenated().to_string();
-        info!("Starting consumer with subscription id : {subscription_uuid}-http");
+        info!("Starting consumer with subscription id : {}", &connection_data.subscription_uuid);
 
         let consumer =
             client.consumer()
                 .with_topic(pulsar_http_topic(connection_data))
                 .with_subscription_type(SubType::Exclusive)
                 .with_consumer_name("consumer")
-                .with_subscription(format!("{subscription_uuid}-http"))
+                .with_subscription(&connection_data.subscription_uuid)
                 .with_options(ConsumerOptions {
+                    durable: Some(true),
                     read_compacted: Some(true),
                     initial_position: InitialPosition::Latest,
                     ..Default::default()
@@ -133,6 +133,7 @@ impl Warp10HttpSink {
     }
 
     pub async fn run(mut self) {
+        info!("started warp10 sink");
         while let Some(message) = self.pulsar_http_source.consumer.try_next().await.ok().flatten() {
             let check_data: CheckData<HttpFields> = match message.deserialize() {
                 Ok(data) => {

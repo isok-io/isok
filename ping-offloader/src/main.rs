@@ -39,6 +39,9 @@ async fn main() {
     let pulsar_tenant = env_get("PULSAR_TENANT");
     let pulsar_namespace = env_get("PULSAR_NAMESPACE");
 
+    let subscription_uuid = env_get("SUBSCRIPTION_ID");
+
+
     init_logger();
 
     let pulsar_connection_data = PulsarConnectionData {
@@ -46,6 +49,7 @@ async fn main() {
         pulsar_token,
         pulsar_tenant,
         pulsar_namespace,
+        subscription_uuid
     };
 
     let warp10_address = env_get("WARP10_ADDRESS");
