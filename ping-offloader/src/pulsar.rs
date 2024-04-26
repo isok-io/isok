@@ -51,7 +51,6 @@ impl PulsarHttpSource {
                 .with_options(ConsumerOptions {
                     durable: Some(true),
                     read_compacted: Some(true),
-                    initial_position: InitialPosition::Latest,
                     ..Default::default()
                 })
                 .build()
