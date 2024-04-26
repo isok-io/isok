@@ -132,6 +132,7 @@ impl Warp10HttpSink {
 
     pub async fn run(mut self) -> Option<()> {
         info!("Started warp10 sink");
+
         while let Some(message) =
             self
                 .pulsar_http_source.consumer
@@ -142,6 +143,8 @@ impl Warp10HttpSink {
                     e
                 })
                 .ok()? {
+            info!("Received a message from pulsar");
+
             let check_data: CheckData<HttpFields> = match message.deserialize() {
                 Ok(data) => {
                     info!("Received a message from {} of check {}", data.agent_id, data.check_id);
@@ -158,6 +161,7 @@ impl Warp10HttpSink {
             let _ = match self.send(warp10_data).await {
                 None => {
                     error!("Failed to send data to warp10");
+                    let _ = self.pulsar_http_source.consumer.ack(&message).await;
                     continue;
                 }
                 Some(_) => {
@@ -167,6 +171,7 @@ impl Warp10HttpSink {
 
             let _ = self.pulsar_http_source.consumer.ack(&message).await;
         }
+
         info!("Stopped warp10 sink");
         Some(())
     }
