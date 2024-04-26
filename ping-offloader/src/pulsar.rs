@@ -127,7 +127,12 @@ impl Warp10HttpSink {
         self.warp10_client.client
             .get_writer(self.warp10_client.token.clone())
             .post(data)
-            .await.ok().map(|_| ())
+            .await
+            .map_err(|e| {
+                error!("Unable to write to warp10 {:?}", e);
+                e
+            })
+            .ok().map(|_| ())
     }
 
     pub async fn run(mut self) -> Option<()> {
