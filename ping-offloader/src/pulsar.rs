@@ -1,10 +1,7 @@
-use std::fmt::format;
-use futures::future::err;
 use log::{error, info};
 use futures::TryStreamExt;
-use pulsar::{Authentication, Consumer, ConsumerOptions, DeserializeMessage, Error, Pulsar, SubType, TokioExecutor};
+use pulsar::{Authentication, Consumer, ConsumerOptions, Pulsar, SubType, TokioExecutor};
 use pulsar::consumer::InitialPosition;
-use time::OffsetDateTime;
 use ping_data::pulsar_messages::{CheckData, CheckMessage};
 use warp10::{Client, Data as Warp10Data, Label, Value};
 use ping_data::check_kinds::http::HttpFields;
@@ -117,12 +114,12 @@ impl Warp10HttpSink {
         vec![
             warp10_data(
                 &check_data,
-                "http_request_time",
+                "http.request_duration",
                 Value::Long(check_data.latency.as_millis() as i64),
             ),
             warp10_data(
                 &check_data,
-                "http_request_status",
+                "http.request_status",
                 Value::Int(check_data.fields.status_code as i32),
             ),
         ]
