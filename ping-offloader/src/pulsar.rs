@@ -93,10 +93,10 @@ pub fn warp10_data(check_message: &CheckData<HttpFields>, name: &str, value: Val
         None,
         name.to_string(),
         vec![Label::new(
-            "check_id",
+            "checkId",
             check_message.check_id.as_hyphenated().to_string().as_str(),
         ), Label::new(
-            "agent_id",
+            "agentId",
             check_message.agent_id.as_str(),
         )],
         value,
