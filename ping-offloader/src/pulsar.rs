@@ -1,7 +1,6 @@
 use log::{error, info};
 use futures::TryStreamExt;
 use pulsar::{Authentication, Consumer, ConsumerOptions, Pulsar, SubType, TokioExecutor};
-use pulsar::consumer::InitialPosition;
 use ping_data::pulsar_messages::{CheckData, CheckMessage};
 use warp10::{Client, Data as Warp10Data, Label, Value};
 use ping_data::check_kinds::http::HttpFields;
@@ -131,9 +130,18 @@ impl Warp10HttpSink {
             .await.ok().map(|_| ())
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self) -> Option<()> {
         info!("started warp10 sink");
-        while let Some(message) = self.pulsar_http_source.consumer.try_next().await.ok().flatten() {
+        while let Some(message) =
+            self
+                .pulsar_http_source.consumer
+                .try_next()
+                .await
+                .map_err(|e| {
+                    error!("unable to read from pulsar {:?}", e);
+                    e
+                })
+                .ok()? {
             let check_data: CheckData<HttpFields> = match message.deserialize() {
                 Ok(data) => {
                     info!("received a message from {} of check {}", data.agent_id, data.check_id);
@@ -158,6 +166,7 @@ impl Warp10HttpSink {
 
             let _ = self.pulsar_http_source.consumer.ack(&message).await;
         }
+        Some(())
     }
 }
 
