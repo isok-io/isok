@@ -131,24 +131,24 @@ impl Warp10HttpSink {
     }
 
     pub async fn run(mut self) -> Option<()> {
-        info!("started warp10 sink");
+        info!("Started warp10 sink");
         while let Some(message) =
             self
                 .pulsar_http_source.consumer
                 .try_next()
                 .await
                 .map_err(|e| {
-                    error!("unable to read from pulsar {:?}", e);
+                    error!("Unable to read from pulsar {:?}", e);
                     e
                 })
                 .ok()? {
             let check_data: CheckData<HttpFields> = match message.deserialize() {
                 Ok(data) => {
-                    info!("received a message from {} of check {}", data.agent_id, data.check_id);
+                    info!("Received a message from {} of check {}", data.agent_id, data.check_id);
                     data.into()
                 }
                 Err(e) => {
-                    error!("could not deserialize message: {:?}", e);
+                    error!("Could not deserialize message: {:?}", e);
                     let _ = self.pulsar_http_source.consumer.ack(&message).await;
                     continue;
                 }
@@ -157,16 +157,17 @@ impl Warp10HttpSink {
             let warp10_data = Self::data(check_data);
             let _ = match self.send(warp10_data).await {
                 None => {
-                    error!("failed to send data to warp10");
+                    error!("Failed to send data to warp10");
                     continue;
                 }
                 Some(_) => {
-                    info!("data sent to warp10")
+                    info!("Sent data to warp10")
                 }
             };
 
             let _ = self.pulsar_http_source.consumer.ack(&message).await;
         }
+        info!("Stopped warp10 sink");
         Some(())
     }
 }
