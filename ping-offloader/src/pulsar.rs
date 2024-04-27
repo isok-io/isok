@@ -163,9 +163,9 @@ impl Warp10HttpSink {
             };
 
             let warp10_data = Self::data(check_data);
-            info!("Data: {:?}", {
-                &warp10_data.iter().map(|d|d.warp10_serialize())
-            });
+            let debug: Vec<String> = warp10_data.iter().map(|d| d.warp10_serialize()).collect();
+
+            info!("Data: {:?}", debug);
             let _ = match self.send(warp10_data).await {
                 None => {
                     error!("Failed to send data to warp10");
