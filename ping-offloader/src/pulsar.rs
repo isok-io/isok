@@ -173,7 +173,7 @@ impl Warp10HttpSink {
                 }
             });
 
-            info!("Data: {:?}", debug);
+            info!("{debug}");
             let _ = match self.send(warp10_data).await {
                 None => {
                     error!("Failed to send data to warp10");
