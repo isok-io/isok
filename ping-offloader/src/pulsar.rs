@@ -163,7 +163,15 @@ impl Warp10HttpSink {
             };
 
             let warp10_data = Self::data(check_data);
-            let debug: Vec<String> = warp10_data.iter().map(|d| d.warp10_serialize()).collect();
+            let debug: String = warp10_data.iter()
+                .map(|d| d.warp10_serialize())
+                .fold(String::new(), |acc, cur| {
+                if acc.is_empty() {
+                    cur
+                } else {
+                    (acc + "\n") + &cur
+                }
+            });
 
             info!("Data: {:?}", debug);
             let _ = match self.send(warp10_data).await {
