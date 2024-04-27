@@ -163,6 +163,7 @@ impl Warp10HttpSink {
             };
 
             let warp10_data = Self::data(check_data);
+            info!("Data: {:?}", warp10_data);
             let _ = match self.send(warp10_data).await {
                 None => {
                     error!("Failed to send data to warp10");
