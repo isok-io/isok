@@ -2,7 +2,7 @@ use log::{error, info};
 use futures::TryStreamExt;
 use pulsar::{Authentication, Consumer, ConsumerOptions, Pulsar, SubType, TokioExecutor};
 use ping_data::pulsar_messages::{CheckData, CheckMessage};
-use warp10::{Client, Data as Warp10Data, Label, Value, Warp10Serializable};
+use warp10::{Client, Data as Warp10Data, Label, Value};
 use ping_data::check_kinds::http::HttpFields;
 
 
@@ -163,17 +163,6 @@ impl Warp10HttpSink {
             };
 
             let warp10_data = Self::data(check_data);
-            let debug: String = warp10_data.iter()
-                .map(|d| d.warp10_serialize())
-                .fold(String::new(), |acc, cur| {
-                if acc.is_empty() {
-                    cur
-                } else {
-                    (acc + "\n") + &cur
-                }
-            });
-
-            info!("{debug}");
             let _ = match self.send(warp10_data).await {
                 None => {
                     error!("Failed to send data to warp10");

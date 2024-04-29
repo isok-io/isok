@@ -1,9 +1,11 @@
 use std::str::FromStr;
 use env_logger::{Builder as Logger, Env};
 use log::{error, info};
-use crate::pulsar::{PulsarConnectionData, PulsarHttpSource, Warp10Client, Warp10ConnectionData, Warp10HttpSink};
+use http::warp10::{PulsarConnectionData, PulsarHttpSource, Warp10Client, Warp10ConnectionData, Warp10HttpSink};
+use crate::http::warp10::pulsar_http_topic;
 
-pub mod pulsar;
+pub mod http;
+mod warp10;
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -61,7 +63,7 @@ async fn main() {
 
     info!(
         "Connecting to pulsar topic {}...",
-        pulsar::pulsar_http_topic(&pulsar_connection_data)
+        pulsar_http_topic(&pulsar_connection_data)
     );
 
     let pulsar_source = match PulsarHttpSource::new(&pulsar_connection_data).await {
