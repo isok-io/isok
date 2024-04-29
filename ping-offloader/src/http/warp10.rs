@@ -77,7 +77,7 @@ impl Warp10Client {
     pub fn new(connection_data: Warp10ConnectionData) -> Option<Self> {
         Some(Self {
             client: Client::new(connection_data.warp10_address.as_str()).ok()?,
-            token: connection_data.warp10_address,
+            token: connection_data.warp10_token,
         })
     }
 }
