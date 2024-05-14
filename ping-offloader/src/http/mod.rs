@@ -7,6 +7,7 @@ use crate::http::warp10::{Warp10Client, Warp10ConnectionData, Warp10HttpSink};
 use crate::pulsar_source::{pulsar_http_topic, PulsarConnectionData, PulsarSource};
 
 pub mod warp10;
+pub mod aggregator;
 
 pub async fn run_http(pulsar_connection_data: PulsarConnectionData) {
     let warp10_address = env_get("WARP10_ADDRESS");
