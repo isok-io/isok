@@ -1,6 +1,6 @@
 use crate::check::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HttpFields {
     pub status_code: u16,
 }

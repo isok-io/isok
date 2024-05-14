@@ -1,64 +1,8 @@
 use log::{error, info};
-use futures::TryStreamExt;
-use pulsar::{Authentication, Consumer, ConsumerOptions, Pulsar, SubType, TokioExecutor};
-use ping_data::pulsar_messages::{CheckData, CheckMessage};
+use tokio::sync::broadcast::Receiver;
+use ping_data::pulsar_messages::{CheckData};
 use warp10::{Client, Data as Warp10Data, Label, Value};
 use ping_data::check_kinds::http::HttpFields;
-
-
-/// Pulsar connection data, passed by env vars
-#[derive(Debug, Clone)]
-pub struct PulsarConnectionData {
-    pub pulsar_address: String,
-    pub pulsar_token: String,
-    pub pulsar_tenant: String,
-    pub pulsar_namespace: String,
-    pub subscription_uuid: String,
-}
-
-pub fn pulsar_http_topic(connection_data: &PulsarConnectionData) -> String {
-    format!(
-        "persistent://{}/{}/http",
-        connection_data.pulsar_tenant,
-        connection_data.pulsar_namespace,
-    )
-}
-
-pub struct PulsarHttpSource {
-    consumer: Consumer<CheckMessage, TokioExecutor>,
-}
-
-impl PulsarHttpSource {
-    pub async fn new(connection_data: &PulsarConnectionData) -> Option<Self> {
-        let client = Pulsar::builder(&connection_data.pulsar_address, TokioExecutor)
-            .with_auth(Authentication {
-                name: "token".to_owned(),
-                data: Vec::from(connection_data.pulsar_token.as_bytes()),
-            })
-            .build()
-            .await
-            .ok()?;
-
-        info!("Starting consumer with subscription id : {}", &connection_data.subscription_uuid);
-
-        let consumer =
-            client.consumer()
-                .with_topic(pulsar_http_topic(connection_data))
-                .with_subscription_type(SubType::Failover)
-                .with_consumer_name("warp10-http-sink")
-                .with_subscription(&connection_data.subscription_uuid)
-                .with_options(ConsumerOptions {
-                    durable: Some(true),
-                    read_compacted: Some(true),
-                    ..Default::default()
-                })
-                .build()
-                .await
-                .ok()?;
-
-        Some(Self { consumer })
-    }
-}
 
 /// Warp10 connection data, passed by env vars
 #[derive(Debug, Clone)]
@@ -84,7 +28,7 @@ impl Warp10Client {
 
 pub struct Warp10HttpSink {
     warp10_client: Warp10Client,
-    pulsar_http_source: PulsarHttpSource,
+    http_receiver: Receiver<CheckData<HttpFields>>,
 }
 
 pub fn warp10_data(check_message: &CheckData<HttpFields>, name: &str, value: Value) -> Warp10Data {
@@ -104,8 +48,8 @@ pub fn warp10_data(check_message: &CheckData<HttpFields>, name: &str, value: Val
 }
 
 impl Warp10HttpSink {
-    pub fn new(warp10_client: Warp10Client, pulsar_http_source: PulsarHttpSource) -> Self {
-        Self { warp10_client, pulsar_http_source }
+    pub fn new(warp10_client: Warp10Client, http_receiver: Receiver<CheckData<HttpFields>>) -> Self {
+        Self { warp10_client, http_receiver }
     }
 
     pub fn data(check_data: CheckData<HttpFields>) -> Vec<Warp10Data> {
@@ -137,44 +81,17 @@ impl Warp10HttpSink {
 
     pub async fn run(mut self) -> Option<()> {
         info!("Started warp10 sink");
-
-        while let Some(message) =
-            self
-                .pulsar_http_source.consumer
-                .try_next()
-                .await
-                .map_err(|e| {
-                    error!("Unable to read from pulsar {:?}", e);
-                    e
-                })
-                .ok()? {
-            info!("Received a message from pulsar");
-
-            let check_data: CheckData<HttpFields> = match message.deserialize() {
-                Ok(data) => {
-                    info!("Received a message from {} of check {}", data.agent_id, data.check_id);
-                    data.into()
-                }
-                Err(e) => {
-                    error!("Could not deserialize message: {:?}", e);
-                    let _ = self.pulsar_http_source.consumer.ack(&message).await;
-                    continue;
-                }
-            };
-
+        while let Some(check_data) = self.http_receiver.recv().await.ok() {
             let warp10_data = Self::data(check_data);
             let _ = match self.send(warp10_data).await {
                 None => {
                     error!("Failed to send data to warp10");
-                    let _ = self.pulsar_http_source.consumer.ack(&message).await;
                     continue;
                 }
                 Some(_) => {
                     info!("Sent data to warp10")
                 }
             };
-
-            let _ = self.pulsar_http_source.consumer.ack(&message).await;
         }
 
         info!("Stopped warp10 sink");

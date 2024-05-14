@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::time::Duration;
 use pulsar::producer::Message;
@@ -90,7 +90,8 @@ impl<A: Serialize + DeserializeOwned> CheckResult<A> {
     }
 }
 
-pub struct CheckData<A: Serialize + DeserializeOwned> {
+#[derive(Clone, Debug)]
+pub struct CheckData<A: Serialize + DeserializeOwned + Debug> {
     pub check_id: Uuid,
     pub agent_id: String,
     pub timestamp: OffsetDateTime,
@@ -98,7 +99,7 @@ pub struct CheckData<A: Serialize + DeserializeOwned> {
     pub fields: A,
 }
 
-impl<A: Serialize + DeserializeOwned> Into<CheckData<A>> for CheckMessage {
+impl<A: Serialize + DeserializeOwned + Debug> Into<CheckData<A>> for CheckMessage {
     fn into(self) -> CheckData<A> {
         CheckData {
             check_id: self.check_id,

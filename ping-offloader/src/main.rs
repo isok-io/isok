@@ -1,11 +1,10 @@
 use std::str::FromStr;
 use env_logger::{Builder as Logger, Env};
-use log::{error, info};
-use http::warp10::{PulsarConnectionData, PulsarHttpSource, Warp10Client, Warp10ConnectionData, Warp10HttpSink};
-use crate::http::warp10::pulsar_http_topic;
+use pulsar_source::{PulsarConnectionData};
+use crate::http::run_http;
 
 pub mod http;
-mod warp10;
+pub mod pulsar_source;
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -53,43 +52,5 @@ async fn main() {
         subscription_uuid,
     };
 
-    let warp10_address = env_get("WARP10_ADDRESS");
-    let warp10_token = env_get("WARP10_TOKEN");
-
-    let warp10_connection_data = Warp10ConnectionData {
-        warp10_address,
-        warp10_token,
-    };
-
-    info!(
-        "Connecting to pulsar topic {}...",
-        pulsar_http_topic(&pulsar_connection_data)
-    );
-
-    let pulsar_source = match PulsarHttpSource::new(&pulsar_connection_data).await {
-        Some(pc) => {
-            info!("Connected to pulsar topic !");
-            pc
-        }
-        None => {
-            error!("Failed to connect to pulsar topic");
-            std::process::exit(1);
-        }
-    };
-
-    info!("Connecting to warp10...",);
-    let warp10_client = match Warp10Client::new(warp10_connection_data) {
-        Some(pc) => {
-            info!("Connected to warp10 !");
-            pc
-        }
-        None => {
-            error!("Failed to connect to warp10");
-            std::process::exit(1);
-        }
-    };
-
-    let warp10_http_sink = Warp10HttpSink::new(warp10_client, pulsar_source);
-
-    warp10_http_sink.run().await;
+    run_http(pulsar_connection_data).await;
 }
