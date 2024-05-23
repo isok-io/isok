@@ -121,22 +121,15 @@ impl Aggregator {
                     info!("Got data from a new agent, appending...");
                     check_buffer.add_check(&check_data)
                 } else {
-                    let _ = match self.pulsar_sink.send(
+                    info!("Sending data to pulsar...");
+                    let _ = self.pulsar_sink.send(
                         AggregatedCheckMessage {
                             check_id: check_data.check_id,
                             timestamp: check_buffer.timestamp,
                             latency: check_buffer.aggregated_message.latency,
                             status_codes: check_buffer.aggregated_message.status_codes.clone(),
                         }
-                    ).await {
-                        None => {
-                            error!("Failed to send data to pulsar");
-                            continue;
-                        }
-                        Some(_) => {
-                            info!("Sent data to pulsar")
-                        }
-                    };
+                    ).await;
                 }
             } else {
                 info!("Got data from a new check, inserting a new buffer...");
