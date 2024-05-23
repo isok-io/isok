@@ -1,6 +1,7 @@
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
+use log::{error, info};
 use pulsar::producer::Message;
 use pulsar::{DeserializeMessage, Error, Payload, Producer, SerializeMessage, TokioExecutor};
 use serde::{Deserialize, Serialize};
@@ -113,25 +114,37 @@ impl Aggregator {
     }
 
     pub async fn run(&mut self) {
+        info!("Started aggregator sink");
         while let Some(check_data) = self.http_receiver.recv().await.ok() {
             if let Some(check_buffer) = self.buffer.get_mut(&check_data.check_id) {
                 if !check_buffer.responded_agents.contains(&check_data.agent_id) {
+                    info!("Got data from a new agent, appending...");
                     check_buffer.add_check(&check_data)
                 } else {
-                    let _ = self.pulsar_sink.send(
+                    let _ = match self.pulsar_sink.send(
                         AggregatedCheckMessage {
                             check_id: check_data.check_id,
                             timestamp: check_buffer.timestamp,
                             latency: check_buffer.aggregated_message.latency,
                             status_codes: check_buffer.aggregated_message.status_codes.clone(),
                         }
-                    ).await;
+                    ).await {
+                        None => {
+                            error!("Failed to send data to pulsar");
+                            continue;
+                        }
+                        Some(_) => {
+                            info!("Sent data to pulsar")
+                        }
+                    };
                 }
             } else {
+                info!("Got data from a new check, inserting a new buffer...");
                 let mut value = AggregateBuffer::default(check_data.timestamp);
                 value.add_check(&check_data);
                 self.buffer.insert(check_data.check_id, value);
             }
         }
+        info!("Stopped aggregator sink");
     }
 }
