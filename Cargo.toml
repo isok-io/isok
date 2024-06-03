@@ -1,3 +1,9 @@
 [workspace]
-members = ["ping-api", "ping-proxy", "ping-data", "ping-agent", "ping-offloader"]
+members = [
+  "isok-api",
+  "isok-proxy",
+  "isok-data",
+  "isok-agent",
+  "isok-offloader",
+]
 resolver = "2"

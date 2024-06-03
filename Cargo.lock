@@ -1853,6 +1853,99 @@ dependencies = [
 ]
 
 [[package]]
+name = "isok-agent"
+version = "0.1.0"
+dependencies = [
+ "cookie-factory",
+ "env_logger 0.11.3",
+ "futures",
+ "isok-data",
+ "log",
+ "nom",
+ "poule",
+ "pulsar",
+ "reqwest 0.12.4",
+ "serde",
+ "slab",
+ "socket2 0.5.5",
+ "time",
+ "tokio",
+ "tokio-util",
+ "uuid",
+]
+
+[[package]]
+name = "isok-api"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "biscuit-auth",
+ "env_logger 0.10.1",
+ "isok-data",
+ "log",
+ "pulsar",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "isok-data"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "http 1.0.0",
+ "pulsar",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "uuid",
+]
+
+[[package]]
+name = "isok-offloader"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.11.3",
+ "futures",
+ "isok-data",
+ "log",
+ "pulsar",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "uuid",
+ "warp10",
+]
+
+[[package]]
+name = "isok-proxy"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "axum",
+ "biscuit-auth",
+ "clap",
+ "env_logger 0.10.1",
+ "futures",
+ "http 1.0.0",
+ "isok-data",
+ "log",
+ "regex",
+ "reqwest 0.11.22",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "toml",
+ "uuid",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2433,99 +2526,6 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
-
-[[package]]
-name = "ping-agent"
-version = "0.1.0"
-dependencies = [
- "cookie-factory",
- "env_logger 0.11.3",
- "futures",
- "log",
- "nom",
- "ping-data",
- "poule",
- "pulsar",
- "reqwest 0.12.4",
- "serde",
- "slab",
- "socket2 0.5.5",
- "time",
- "tokio",
- "tokio-util",
- "uuid",
-]
-
-[[package]]
-name = "ping-api"
-version = "0.1.0"
-dependencies = [
- "axum",
- "biscuit-auth",
- "env_logger 0.10.1",
- "log",
- "ping-data",
- "pulsar",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "ping-data"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "http 1.0.0",
- "pulsar",
- "serde",
- "serde_json",
- "sqlx",
- "time",
- "uuid",
-]
-
-[[package]]
-name = "ping-offloader"
-version = "0.1.0"
-dependencies = [
- "env_logger 0.11.3",
- "futures",
- "log",
- "ping-data",
- "pulsar",
- "serde",
- "serde_json",
- "time",
- "tokio",
- "uuid",
- "warp10",
-]
-
-[[package]]
-name = "ping-proxy"
-version = "0.1.0"
-dependencies = [
- "argon2",
- "axum",
- "biscuit-auth",
- "clap",
- "env_logger 0.10.1",
- "futures",
- "http 1.0.0",
- "log",
- "ping-data",
- "regex",
- "reqwest 0.11.22",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "toml",
- "uuid",
-]
 
 [[package]]
 name = "piper"
