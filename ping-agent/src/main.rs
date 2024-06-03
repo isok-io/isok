@@ -1,3 +1,15 @@
+use std::net::SocketAddr;
+use std::str::FromStr;
+
+use env_logger::{Builder as Logger, Env};
+use futures::TryStreamExt;
+use log::{error, info};
+use tokio::{runtime, sync::mpsc};
+
+pub use job::{JobResources, JobsHandler};
+use ping_data::pulsar_messages::{CheckMessage, CheckResult, CheckType};
+pub use pulsar_client::{PulsarClient, PulsarConnectionData};
+
 /// http ping module
 pub mod http;
 /// icmp ping module
@@ -10,19 +22,7 @@ pub mod magic_pool;
 pub mod pulsar_client;
 /// tcp ping module
 pub mod tcp;
-/// warp10 related stuff
-pub mod warp10;
-
-use env_logger::{Builder as Logger, Env};
-use futures::TryStreamExt;
-use log::{error, info};
-use std::net::SocketAddr;
-use std::str::FromStr;
-use tokio::{runtime, sync::mpsc};
-
-pub use job::{JobRessources, JobsHandler};
-pub use pulsar_client::{PulsarClient, PulsarConnectionData};
-pub use warp10::{Warp10Client, Warp10ConnectionData};
+mod pulsar_sink;
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
@@ -60,13 +60,13 @@ pub fn init_logger() {
 /// Main async process : pulsar consumer loop
 pub async fn main_process(
     pulsar_connection_data: PulsarConnectionData,
-    warp10_connection_data: Warp10ConnectionData,
     task_pools_size: usize,
+    agent_id: String
 ) -> Option<()> {
-    let ressources = JobRessources::default();
-    let (warp10_snd, warp10_rcv): (mpsc::Sender<warp10::Data>, mpsc::Receiver<warp10::Data>) =
+    let resources = JobResources::default();
+    let (pulsar_sender, pulsar_receiver): (mpsc::Sender<CheckMessage>, mpsc::Receiver<CheckMessage>) =
         mpsc::channel(512);
-    let mut handler = JobsHandler::new(ressources, warp10_snd, task_pools_size);
+    let mut handler = JobsHandler::new(resources, pulsar_sender, task_pools_size, agent_id);
 
     info!(
         "Connecting to pulsar topic {}...",
@@ -83,19 +83,18 @@ pub async fn main_process(
         }
     };
 
-    info!("Connecting to warp10...",);
-    let warp10_client = match Warp10Client::new(warp10_connection_data).await {
-        Some(pc) => {
-            info!("Connected to warp10 !");
-            pc
+    let http_producer = match pulsar_client.create_producer(CheckType::Http).await {
+        Some(producer) => {
+            info!("Connected to pulsar topic !");
+            producer
         }
         None => {
-            error!("Failed to connect to warp10");
+            error!("Failed to connect to pulsar topic");
             std::process::exit(1);
         }
     };
 
-    tokio::task::spawn(warp10::warp10_sender(warp10_client, warp10_rcv, 10));
+    tokio::task::spawn(pulsar_sink::pulsar_sink(http_producer, pulsar_receiver));
 
     while let Some(msg) = pulsar_client
         .consumer
@@ -147,20 +146,14 @@ pub fn main() {
     let pulsar_namespace = env_get("PULSAR_NAMESPACE");
     let pulsar_topic = env_get("PULSAR_TOPIC");
 
+    let agent_id = env_get("AGENT_ID");
+
     let pulsar_connection_data = PulsarConnectionData {
         pulsar_address,
         pulsar_token,
         pulsar_tenant,
         pulsar_namespace,
-        pulsar_topic,
-    };
-
-    let warp10_address = env_get("WARP10_ADDRESS");
-    let warp10_token = env_get("WARP10_TOKEN");
-
-    let warp_connection_data = Warp10ConnectionData {
-        warp10_address,
-        warp10_token,
+        pulsar_consumer_topic: pulsar_topic,
     };
 
     let runtime = runtime::Builder::new_multi_thread()
@@ -172,7 +165,7 @@ pub fn main() {
     info!("Starting agent with {job_number} jobs...");
     runtime.block_on(main_process(
         pulsar_connection_data,
-        warp_connection_data,
         task_pools_size,
+        agent_id
     ));
 }

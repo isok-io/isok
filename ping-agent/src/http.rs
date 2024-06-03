@@ -1,16 +1,14 @@
 use log::error;
 use ping_data::check::HttpCheck;
-use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue},
-    Client, Method, Request, Url,
-};
+use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, Client, Method, Request, Url, StatusCode};
 use std::collections::HashMap;
 use std::time::Duration;
+use nom::AsBytes;
 use time::OffsetDateTime;
 use uuid::Uuid;
-use warp10::{Data, Value};
-
-use crate::warp10::{warp10_data, Warp10Data};
+use ping_data::pulsar_messages::{CheckMessage, CheckResult};
+use serde::{Deserialize, Serialize};
+use ping_data::check_kinds::http::HttpFields;
 
 /// Http client, [`Client`] wrapper for storage in a [MagicPool](crate::magic_pool::MagicPool)
 pub struct HttpClient {
@@ -25,7 +23,7 @@ impl HttpClient {
     }
 
     /// Send async an http [`Request`]
-    pub async fn send(&self, req: Request) -> Option<HttpResult> {
+    async fn send(&self, req: Request) -> Option<HttpResult> {
         let before = std::time::SystemTime::now();
         let res = self.client.execute(req).await.ok()?;
         let elapsed = before.elapsed().ok()?;
@@ -35,6 +33,16 @@ impl HttpClient {
             request_time: elapsed,
             status: res.status().as_u16(),
         })
+    }
+
+    pub async fn run(&self, req: Request) -> HttpResult {
+        self.send(req).await.unwrap_or_else(
+            || HttpResult {
+                datetime: OffsetDateTime::now_utc(),
+                request_time: Duration::from_millis(i64::MAX as u64),
+                status: 500,
+            }
+        )
     }
 }
 
@@ -114,21 +122,12 @@ pub struct HttpResult {
     pub status: u16,
 }
 
-impl Warp10Data for HttpResult {
-    fn data(&self, uuid: Uuid) -> Vec<Data> {
-        vec![
-            warp10_data(
-                self.datetime,
-                "http_request_time",
-                uuid,
-                Value::Long(self.request_time.as_millis() as i64),
-            ),
-            warp10_data(
-                self.datetime,
-                "http_request_status",
-                uuid,
-                Value::Int(self.status as i32),
-            ),
-        ]
+impl Into<CheckResult<HttpFields>> for HttpResult {
+    fn into(self) -> CheckResult<HttpFields> {
+        CheckResult {
+            timestamp: self.datetime,
+            latency: self.request_time,
+            fields: HttpFields::new(self.status),
+        }
     }
 }

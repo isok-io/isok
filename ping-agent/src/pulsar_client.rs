@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+use std::sync::Arc;
 use log::info;
 use ping_data::pulsar_commands::Command;
-use pulsar::{
-    consumer::InitialPosition, executor::TokioExecutor, Authentication, Consumer, ConsumerOptions,
-    Pulsar, SubType,
-};
+use pulsar::{consumer::InitialPosition, executor::TokioExecutor, Authentication, Consumer, ConsumerOptions, Pulsar, SubType, Producer, ProducerOptions, Error};
+use pulsar::producer::SendFuture;
+use tokio::sync::Mutex;
 use uuid::Uuid;
+use ping_data::pulsar_messages::{CheckMessage, CheckType};
 
 /// Helper to make topic link from tenant, namespace and topic
 pub fn pulsar_link(connection_data: &PulsarConnectionData) -> String {
@@ -12,7 +14,16 @@ pub fn pulsar_link(connection_data: &PulsarConnectionData) -> String {
         "persistent://{}/{}/{}",
         connection_data.pulsar_tenant,
         connection_data.pulsar_namespace,
-        connection_data.pulsar_topic
+        connection_data.pulsar_consumer_topic
+    )
+}
+
+pub fn pulsar_producer_topic(connection_data: &PulsarConnectionData, kind: CheckType) -> String {
+    format!(
+        "persistent://{}/{}/{}",
+        connection_data.pulsar_tenant,
+        connection_data.pulsar_namespace,
+        kind.to_string()
     )
 }
 
@@ -23,12 +34,14 @@ pub struct PulsarConnectionData {
     pub pulsar_token: String,
     pub pulsar_tenant: String,
     pub pulsar_namespace: String,
-    pub pulsar_topic: String,
+    pub pulsar_consumer_topic: String,
 }
 
 /// A pulsar client
 pub struct PulsarClient {
+    pub client: Pulsar<TokioExecutor>,
     pub consumer: Consumer<Command, TokioExecutor>,
+    pub connection_data: PulsarConnectionData,
 }
 
 impl PulsarClient {
@@ -60,6 +73,16 @@ impl PulsarClient {
             .await
             .ok()?;
 
-        Some(PulsarClient { consumer })
+        Some(PulsarClient { client, consumer, connection_data })
+    }
+
+    pub async fn create_producer(&self, kind: CheckType) -> Option<Producer<TokioExecutor>> {
+        self.client.producer()
+            .with_topic(pulsar_producer_topic(&self.connection_data, kind))
+            .with_name(kind.to_string())
+            .build()
+            .await
+            .ok()
     }
 }
+
