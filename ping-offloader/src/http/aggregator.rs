@@ -1,16 +1,14 @@
-use std::cmp::max;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::time::Duration;
-use log::{error, info};
+use log::{info};
 use pulsar::producer::Message;
 use pulsar::{DeserializeMessage, Error, Payload, Producer, SerializeMessage, TokioExecutor};
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime};
 use tokio::sync::broadcast::Receiver;
-use tokio::sync::mpsc::Sender;
 use uuid::Uuid;
 use ping_data::check_kinds::http::HttpFields;
-use ping_data::pulsar_messages::{CheckData, CheckMessage, CheckResult};
+use ping_data::pulsar_messages::{CheckData};
 
 
 #[derive(Serialize, Deserialize)]
