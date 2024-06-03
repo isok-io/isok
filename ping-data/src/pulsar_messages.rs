@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CheckMessage {
     pub check_id: Uuid,
     pub agent_id: String,
