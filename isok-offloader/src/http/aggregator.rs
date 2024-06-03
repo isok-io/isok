@@ -1,20 +1,19 @@
-use std::collections::{HashMap};
-use std::time::Duration;
-use log::{info};
+use chrono::{DateTime, FixedOffset};
+use isok_data::check_kinds::http::HttpFields;
+use isok_data::pulsar_messages::CheckData;
+use log::info;
 use pulsar::producer::Message;
 use pulsar::{DeserializeMessage, Error, Payload, Producer, SerializeMessage, TokioExecutor};
 use serde::{Deserialize, Serialize};
-use time::{OffsetDateTime};
+use std::collections::HashMap;
+use std::time::Duration;
 use tokio::sync::broadcast::Receiver;
 use uuid::Uuid;
-use isok_data::check_kinds::http::HttpFields;
-use isok_data::pulsar_messages::{CheckData};
-
 
 #[derive(Serialize, Deserialize)]
 pub struct AggregatedCheckMessage {
     check_id: Uuid,
-    timestamp: OffsetDateTime,
+    timestamp: DateTime<FixedOffset>,
     latency: Duration,
     status_codes: StatusCodeCount,
 }
@@ -75,13 +74,13 @@ pub struct StatusCodeCount {
 }
 
 pub struct AggregateBuffer {
-    pub timestamp: OffsetDateTime,
+    pub timestamp: DateTime<FixedOffset>,
     pub responded_agents: Vec<String>,
     pub aggregated_message: AggregateValues,
 }
 
 impl AggregateBuffer {
-    fn default(timestamp: OffsetDateTime) -> Self {
+    fn default(timestamp: DateTime<FixedOffset>) -> Self {
         Self {
             timestamp,
             responded_agents: Vec::new(),
@@ -91,7 +90,8 @@ impl AggregateBuffer {
 
     fn add_check(&mut self, check_data: &CheckData<HttpFields>) {
         self.responded_agents.push(check_data.agent_id.clone());
-        self.aggregated_message.aggregate(check_data.latency, check_data.fields.status_code)
+        self.aggregated_message
+            .aggregate(check_data.latency, check_data.fields.status_code)
     }
 }
 
@@ -102,8 +102,10 @@ pub struct Aggregator {
 }
 
 impl Aggregator {
-    pub fn new(http_receiver: Receiver<CheckData<HttpFields>>,
-               pulsar_sink: Producer<TokioExecutor>) -> Self {
+    pub fn new(
+        http_receiver: Receiver<CheckData<HttpFields>>,
+        pulsar_sink: Producer<TokioExecutor>,
+    ) -> Self {
         Self {
             http_receiver,
             pulsar_sink,
@@ -120,14 +122,15 @@ impl Aggregator {
                     check_buffer.add_check(&check_data)
                 } else {
                     info!("Sending data to pulsar...");
-                    let _ = self.pulsar_sink.send(
-                        AggregatedCheckMessage {
+                    let _ = self
+                        .pulsar_sink
+                        .send(AggregatedCheckMessage {
                             check_id: check_data.check_id,
                             timestamp: check_buffer.timestamp,
                             latency: check_buffer.aggregated_message.latency,
                             status_codes: check_buffer.aggregated_message.status_codes.clone(),
-                        }
-                    ).await;
+                        })
+                        .await;
                 }
             } else {
                 info!("Got data from a new check, inserting a new buffer...");

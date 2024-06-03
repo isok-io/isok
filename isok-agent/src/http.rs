@@ -1,14 +1,17 @@
-use log::error;
+use chrono::{DateTime, FixedOffset, Local};
 use isok_data::check::HttpCheck;
-use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, Client, Method, Request, Url, StatusCode};
+use isok_data::check_kinds::http::HttpFields;
+use isok_data::pulsar_messages::{CheckMessage, CheckResult};
+use log::error;
+use nom::AsBytes;
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Client, Method, Request, StatusCode, Url,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use nom::AsBytes;
-use time::OffsetDateTime;
 use uuid::Uuid;
-use isok_data::pulsar_messages::{CheckMessage, CheckResult};
-use serde::{Deserialize, Serialize};
-use isok_data::check_kinds::http::HttpFields;
 
 /// Http client, [`Client`] wrapper for storage in a [MagicPool](crate::magic_pool::MagicPool)
 pub struct HttpClient {
@@ -29,20 +32,18 @@ impl HttpClient {
         let elapsed = before.elapsed().ok()?;
 
         Some(HttpResult {
-            datetime: OffsetDateTime::now_utc(),
+            datetime: Local::now().fixed_offset(),
             request_time: elapsed,
             status: res.status().as_u16(),
         })
     }
 
     pub async fn run(&self, req: Request) -> HttpResult {
-        self.send(req).await.unwrap_or_else(
-            || HttpResult {
-                datetime: OffsetDateTime::now_utc(),
-                request_time: Duration::from_millis(i64::MAX as u64),
-                status: 500,
-            }
-        )
+        self.send(req).await.unwrap_or_else(|| HttpResult {
+            datetime: Local::now().fixed_offset(),
+            request_time: Duration::from_millis(i64::MAX as u64),
+            status: 500,
+        })
     }
 }
 
@@ -117,7 +118,7 @@ impl Into<Request> for HttpContext {
 
 /// Result of an http request ready to be send to warp10
 pub struct HttpResult {
-    pub datetime: OffsetDateTime,
+    pub datetime: DateTime<FixedOffset>,
     pub request_time: Duration,
     pub status: u16,
 }

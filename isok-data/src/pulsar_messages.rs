@@ -1,18 +1,18 @@
+use chrono::{DateTime, FixedOffset};
+use pulsar::producer::Message;
+use pulsar::{DeserializeMessage, Error, Payload, SerializeMessage};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::time::Duration;
-use pulsar::producer::Message;
-use pulsar::{DeserializeMessage, Error, Payload, SerializeMessage};
-use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
-use time::OffsetDateTime;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CheckMessage {
     pub check_id: Uuid,
     pub agent_id: String,
-    pub timestamp: OffsetDateTime,
+    pub timestamp: DateTime<FixedOffset>,
     pub latency: Duration,
     pub fields: serde_json::Value,
 }
@@ -39,14 +39,18 @@ impl DeserializeMessage for CheckMessage {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum CheckType {
-    Http
+    Http,
 }
 
 impl Display for CheckType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            CheckType::Http => "http"
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                CheckType::Http => "http",
+            }
+        )
     }
 }
 
@@ -55,7 +59,11 @@ pub struct CheckTypeParseError(String);
 
 impl Display for CheckTypeParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Invalid CheckType value, should be a lowercase string, got : {}", self.0)
+        write!(
+            f,
+            "Invalid CheckType value, should be a lowercase string, got : {}",
+            self.0
+        )
     }
 }
 
@@ -67,13 +75,13 @@ impl FromStr for CheckType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "http" => Ok(CheckType::Http),
-            _ => Err(CheckTypeParseError(s.to_string()))
+            _ => Err(CheckTypeParseError(s.to_string())),
         }
     }
 }
 
 pub struct CheckResult<A: Serialize + DeserializeOwned> {
-    pub timestamp: OffsetDateTime,
+    pub timestamp: DateTime<FixedOffset>,
     pub latency: Duration,
     pub fields: A,
 }
@@ -94,7 +102,7 @@ impl<A: Serialize + DeserializeOwned> CheckResult<A> {
 pub struct CheckData<A: Serialize + DeserializeOwned + Debug> {
     pub check_id: Uuid,
     pub agent_id: String,
-    pub timestamp: OffsetDateTime,
+    pub timestamp: DateTime<FixedOffset>,
     pub latency: Duration,
     pub fields: A,
 }

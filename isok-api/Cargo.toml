@@ -6,10 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.35.0", features = ["macros", "rt-multi-thread", "rt"] }
+tokio = { workspace = true }
 uuid = { version = "1.6.1", features = ["v4"] }
-axum = "0.7.2"
-env_logger = "0.10.1"
+axum = { version = "0.7.2", default-features = false, features = [
+  "http1",
+  "http2",
+  "json",
+  "tokio",
+  "tracing",
+] }
+env_logger = { workspace = true }
 sqlx = { version = "0.7.3", features = [
   "runtime-tokio",
   "chrono",
@@ -17,11 +23,13 @@ sqlx = { version = "0.7.3", features = [
   "uuid",
   "json",
   "macros",
-  "time",
 ] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = { version = "1.0.108", features = ["raw_value"] }
-pulsar = "6.1.0"
+pulsar = { version = "6.1.0", default-features = false, features = [
+  "compression",
+  "tokio-runtime",
+] }
 isok-data = { path = "../isok-data" }
-log = "0.4.20"
+log = { workspace = true }
 biscuit-auth = "4.0.0"

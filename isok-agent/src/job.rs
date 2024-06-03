@@ -4,7 +4,6 @@ use std::time::{Duration, SystemTime};
 
 use log::{error, info, warn};
 use slab::Slab;
-use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio_util::task::LocalPoolHandle;
@@ -101,9 +100,14 @@ impl Job {
     ) {
         match &self.kind {
             JobKind::Dummy => Self::execute_dummy(&self.id, task_pool),
-            JobKind::Http(ctx) => {
-                Self::execute_http(&self.id, ctx.clone(), task_pool, resources, pulsar_sender, agent_id)
-            }
+            JobKind::Http(ctx) => Self::execute_http(
+                &self.id,
+                ctx.clone(),
+                task_pool,
+                resources,
+                pulsar_sender,
+                agent_id,
+            ),
         }
     }
 }
@@ -164,7 +168,12 @@ impl JobScheduler {
                 if let Ok(mut jl) = job_list.lock() {
                     for (_, j) in &mut jl[time_cursor] {
                         if let Ok(mut resources) = resources.lock() {
-                            j.execute(&task_pool, &mut resources, pulsar_sender.clone(), agent_id.clone())
+                            j.execute(
+                                &task_pool,
+                                &mut resources,
+                                pulsar_sender.clone(),
+                                agent_id.clone(),
+                            )
                         }
                     }
                 }
