@@ -282,7 +282,7 @@ impl JobsHandler {
     }
 
     pub fn add_check(&mut self, c: &CheckOutput) {
-        let frequency = c.interval;
+        let frequency = Duration::from_secs(c.interval as u64);
 
         if !self.jobs.contains_key(&frequency) {
             self.jobs.insert(

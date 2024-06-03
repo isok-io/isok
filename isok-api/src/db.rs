@@ -109,7 +109,7 @@ impl DbHandler {
             check.owner_id,
             serde_json::to_value(check.kind).unwrap(),
             duration_to_pg_interval(check.max_latency),
-            duration_to_pg_interval(check.interval),
+            duration_to_pg_interval(Duration::from_secs(check.interval as u64)),
             check.region,
             now,
             now

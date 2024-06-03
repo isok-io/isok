@@ -1,8 +1,8 @@
+use isok_data::check_kinds::http::HttpFields;
+use isok_data::pulsar_messages::CheckData;
 use log::{error, info};
 use tokio::sync::broadcast::Receiver;
-use isok_data::pulsar_messages::{CheckData};
 use warp10::{Client, Data as Warp10Data, Label, Value};
-use isok_data::check_kinds::http::HttpFields;
 
 /// Warp10 connection data, passed by env vars
 #[derive(Debug, Clone)]
@@ -10,7 +10,6 @@ pub struct Warp10ConnectionData {
     pub warp10_address: String,
     pub warp10_token: String,
 }
-
 
 pub struct Warp10Client {
     client: Client,
@@ -36,20 +35,26 @@ pub fn warp10_data(check_message: &CheckData<HttpFields>, name: &str, value: Val
         check_message.timestamp,
         None,
         name.to_string(),
-        vec![Label::new(
-            "check-id",
-            check_message.check_id.as_hyphenated().to_string().as_str(),
-        ), Label::new(
-            "agent-id",
-            check_message.agent_id.as_str(),
-        )],
+        vec![
+            Label::new(
+                "check-id",
+                check_message.check_id.as_hyphenated().to_string().as_str(),
+            ),
+            Label::new("agent-id", check_message.agent_id.as_str()),
+        ],
         value,
     )
 }
 
 impl Warp10HttpSink {
-    pub fn new(warp10_client: Warp10Client, http_receiver: Receiver<CheckData<HttpFields>>) -> Self {
-        Self { warp10_client, http_receiver }
+    pub fn new(
+        warp10_client: Warp10Client,
+        http_receiver: Receiver<CheckData<HttpFields>>,
+    ) -> Self {
+        Self {
+            warp10_client,
+            http_receiver,
+        }
     }
 
     pub fn data(check_data: CheckData<HttpFields>) -> Vec<Warp10Data> {
@@ -68,7 +73,8 @@ impl Warp10HttpSink {
     }
 
     pub async fn send(&self, data: Vec<Warp10Data>) -> Option<()> {
-        self.warp10_client.client
+        self.warp10_client
+            .client
             .get_writer(self.warp10_client.token.clone())
             .post(data)
             .await
@@ -76,7 +82,8 @@ impl Warp10HttpSink {
                 error!("Unable to write to warp10 {:?}", e);
                 e
             })
-            .ok().map(|_| ())
+            .ok()
+            .map(|_| ())
     }
 
     pub async fn run(mut self) -> Option<()> {
@@ -98,4 +105,3 @@ impl Warp10HttpSink {
         Some(())
     }
 }
-

@@ -277,6 +277,8 @@ pub struct TcpCheck {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
+#[serde(rename_all = "lowercase")]
 pub enum CheckKind {
     Dns(DnsCheck),
     Icmp(IcmpCheck),
@@ -304,7 +306,7 @@ impl Into<CheckOutput> for Check {
             owner_id: self.owner_id,
             kind: self.kind,
             max_latency: self.max_latency,
-            interval: self.interval,
+            interval: self.interval.as_secs() as u32,
             region: self.region,
         }
     }
@@ -315,7 +317,8 @@ pub struct CheckInput {
     pub owner_id: Uuid,
     pub kind: CheckKind,
     pub max_latency: Duration,
-    pub interval: Duration,
+    /// Interval in seconds
+    pub interval: u32,
     pub region: String,
 }
 
@@ -324,7 +327,7 @@ impl CheckInput {
         kind: CheckKind,
         owner_id: Uuid,
         max_latency: Duration,
-        interval: Duration,
+        interval: u32,
         region: String,
     ) -> Self {
         Self {
@@ -344,7 +347,7 @@ impl Into<Check> for CheckInput {
             owner_id: self.owner_id,
             kind: self.kind,
             max_latency: self.max_latency,
-            interval: self.interval,
+            interval: Duration::from_secs(self.interval as u64),
             region: self.region,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -359,6 +362,6 @@ pub struct CheckOutput {
     pub owner_id: Uuid,
     pub kind: CheckKind,
     pub max_latency: Duration,
-    pub interval: Duration,
+    pub interval: u32,
     pub region: String,
 }
