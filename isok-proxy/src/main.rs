@@ -3,9 +3,11 @@ pub use std::sync::Arc;
 
 pub use argon2::Params;
 pub use biscuit_auth::PrivateKey;
-pub use clap::Parser;
 pub use env_logger::{Builder as Logger, Env};
 pub use log::{debug, error, info};
+
+#[cfg(not(feature = "env_config"))]
+pub use clap::Parser;
 
 pub use crate::api::{routes, ApiHandler, AuthHandler};
 pub use crate::config::IncompleteConfig;
@@ -31,6 +33,7 @@ pub fn init_logger() {
     Logger::from_env(env).init();
 }
 
+#[cfg(not(feature = "env_config"))]
 #[derive(Parser, Debug)]
 pub struct Cli {
     /// Set config toml file
@@ -77,26 +80,32 @@ pub struct Cli {
 #[tokio::main]
 async fn main() {
     init_logger();
-    let cli = Cli::parse();
-    debug!("{:#?}", cli);
 
-    let config = match cli.config {
-        Some(ref path) => IncompleteConfig::from_file(path)
-            .map_err(|e| {
-                error!("Failed to open config file: {e}");
-                std::process::exit(1)
-            })
-            .unwrap()
-            .map_err(|e| {
-                error!("Failed to parse config file: {e}");
-                std::process::exit(1)
-            })
-            .unwrap()
-            .merge(IncompleteConfig::from_env()),
-        None => IncompleteConfig::from_env(),
-    }
-    .merge(IncompleteConfig::from_cli(cli))
-    .to_config();
+    #[cfg(not(feature = "env_config"))]
+    let config = {
+        let cli = Cli::parse();
+        debug!("{:#?}", cli);
+        match cli.config {
+            Some(ref path) => IncompleteConfig::from_file(path)
+                .map_err(|e| {
+                    error!("Failed to open config file: {e}");
+                    std::process::exit(1)
+                })
+                .unwrap()
+                .map_err(|e| {
+                    error!("Failed to parse config file: {e}");
+                    std::process::exit(1)
+                })
+                .unwrap()
+                .merge(IncompleteConfig::from_env()),
+            None => IncompleteConfig::from_env(),
+        }
+        .merge(IncompleteConfig::from_cli(cli))
+        .to_config()
+    };
+
+    #[cfg(feature = "env_config")]
+    let config = IncompleteConfig::from_env().to_config();
 
     info!(
         "Starting proxy server at {}:{}...",
