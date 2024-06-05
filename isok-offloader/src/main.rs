@@ -1,7 +1,7 @@
-use std::str::FromStr;
-use env_logger::{Builder as Logger, Env};
-use pulsar_source::{PulsarConnectionData};
 use crate::http::run_http;
+use env_logger::{Builder as Logger, Env};
+use pulsar_source::PulsarConnectionData;
+use std::str::FromStr;
 
 pub mod http;
 pub mod pulsar_source;
@@ -31,7 +31,6 @@ pub fn init_logger() {
     let env = Env::new().filter_or("LOG_LEVEL", "info");
     Logger::from_env(env).init();
 }
-
 
 #[tokio::main]
 async fn main() {
