@@ -21,3 +21,32 @@ env_logger = { version = "0.11.3", default-features = false, features = [
   "auto-color",
   "humantime",
 ] }
+uuid = "1.8.0"
+axum = { version = "0.7.5", default-features = false, features = [
+  "http1",
+  "http2",
+  "json",
+  "tokio",
+  "tracing",
+] }
+sqlx = { version = "0.7.4", features = [
+  "runtime-tokio",
+  "chrono",
+  "postgres",
+  "uuid",
+  "json",
+  "macros",
+] }
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.117"
+pulsar = { version = "6.3.0", default-features = false, features = [
+  "tokio-runtime",
+] }
+reqwest = { version = "0.12.4", default-features = false, features = [
+  "default-tls",
+  "charset",
+  "http2",
+  "json"
+] }
+futures = "0.3.30"
+http = "1.1.0"

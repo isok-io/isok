@@ -8,14 +8,9 @@ edition = "2021"
 [dependencies]
 tokio = { workspace = true }
 chrono = { workspace = true }
-reqwest = { version = "0.12.4", default-features = false, features = [
-  "default-tls",
-  "charset",
-  "http2",
-] }
-pulsar = { version = "6.1.0", default-features = false, features = [
+reqwest = { workspace = true }
+pulsar = { workspace = true, features = [
   "compression",
-  "tokio-runtime",
 ] }
 log = { workspace = true }
 env_logger = { workspace = true }
@@ -23,9 +18,9 @@ isok-data = { path = "../isok-data" }
 socket2 = "0.5.5"
 nom = "7.1.3"
 cookie-factory = "0.3.2"
-uuid = "1.6.1"
+uuid = { workspace = true }
 poule = "0.3.2"
-futures = "0.3.29"
+futures = { workspace = true }
 slab = "0.4.9"
 tokio-util = { version = "0.7.10", features = ["rt"] }
-serde = { version = "1.0.195", features = ["derive"] }
+serde = { workspace = true }

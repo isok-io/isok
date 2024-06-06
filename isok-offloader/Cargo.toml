@@ -10,13 +10,12 @@ env_logger = { workspace = true }
 tokio = { workspace = true }
 chrono = { workspace = true }
 warp10 = { git = "https://github.com/isok-io/warp10.rs" }
-futures = "0.3.29"
-pulsar = { version = "6.1.0", default-features = false, features = [
+futures = { workspace = true }
+pulsar = { workspace = true, features = [
   "compression",
-  "tokio-runtime",
 ] }
 isok-data = { path = "../isok-data" }
 log = { workspace = true }
-serde = { version = "1.0.193", features = ["derive"] }
-serde_json = { version = "1.0.108", features = ["raw_value"] }
-uuid = { version = "1.6.1", features = ["v4"] }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["raw_value"] }
+uuid = { workspace = true, features = ["v4"] }
