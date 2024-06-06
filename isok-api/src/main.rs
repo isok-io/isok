@@ -1,15 +1,14 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use env_logger::{Builder as Logger, Env};
 use log::{error, info};
+use tokio::sync::Mutex;
 
-use api::ApiHandler;
 use db::DbHandler;
 
-use crate::{
-    api::ApiHandlerState,
-    pulsar::{PulsarClient, PulsarConnectionData},
-};
+use crate::api::ServerState;
+use crate::pulsar::{PulsarClient, PulsarConnectionData};
 
 pub mod api;
 pub mod db;
@@ -90,10 +89,10 @@ async fn main() {
         }
     };
 
-    let app = api::routes::app(ApiHandlerState::new(ApiHandler {
-        db,
-        pulsar_client: pulsar_client,
-    }));
+    let app = api::routes::app(ServerState {
+        db: Arc::new(db),
+        pulsar_client: Arc::new(Mutex::new(pulsar_client)),
+    });
 
     let listener = tokio::net::TcpListener::bind(format!("{address}:{port}"))
         .await
