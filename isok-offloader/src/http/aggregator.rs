@@ -124,7 +124,7 @@ impl Aggregator {
                     info!("Sending data to pulsar...");
                     let _ = self
                         .pulsar_sink
-                        .send(AggregatedCheckMessage {
+                        .send_non_blocking(AggregatedCheckMessage {
                             check_id: check_data.check_id,
                             timestamp: check_buffer.timestamp,
                             latency: check_buffer.aggregated_message.latency,
