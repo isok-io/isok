@@ -7,29 +7,14 @@ edition = "2021"
 
 [dependencies]
 tokio = { workspace = true }
-uuid = { version = "1.6.1", features = ["v4"] }
-axum = { version = "0.7.2", default-features = false, features = [
-  "http1",
-  "http2",
-  "json",
-  "tokio",
-  "tracing",
-] }
+uuid = { workspace = true, features = ["v4"] }
+axum = { workspace = true }
 env_logger = { workspace = true }
-sqlx = { version = "0.7.3", features = [
-  "runtime-tokio",
-  "chrono",
-  "postgres",
-  "uuid",
-  "json",
-  "macros",
-] }
-serde = { version = "1.0.193", features = ["derive"] }
-serde_json = { version = "1.0.108", features = ["raw_value"] }
-pulsar = { version = "6.1.0", default-features = false, features = [
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["raw_value"] }
+pulsar = { workspace = true, features = [
   "compression",
-  "tokio-runtime",
 ] }
 isok-data = { path = "../isok-data" }
 log = { workspace = true }
-biscuit-auth = "4.0.0"
