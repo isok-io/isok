@@ -14,7 +14,8 @@ use uuid::Uuid;
 pub struct AggregatedCheckMessage {
     check_id: Uuid,
     timestamp: DateTime<FixedOffset>,
-    latency: Duration,
+    /// Latency in milliseconds
+    latency: u64,
     status_codes: StatusCodeCount,
 }
 
@@ -127,7 +128,7 @@ impl Aggregator {
                         .send(AggregatedCheckMessage {
                             check_id: check_data.check_id,
                             timestamp: check_buffer.timestamp,
-                            latency: check_buffer.aggregated_message.latency,
+                            latency: check_buffer.aggregated_message.latency.as_millis() as u64,
                             status_codes: check_buffer.aggregated_message.status_codes.clone(),
                         })
                         .await;
