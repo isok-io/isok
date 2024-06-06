@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use axum::body::Body;
 use axum::http::Response;
 pub use axum::routing::{delete, get, post, put};
@@ -15,7 +13,7 @@ pub fn app(api_handler: ApiHandlerState) -> Router<()> {
     Router::new()
         .route("/ping", get(ping))
         .route("/teapot", get(teapot))
-        .nest("/checks", checks_router(api_handler))
+        .nest("/checks/:organization_id", checks_router(api_handler))
 }
 
 pub async fn ping() -> &'static str {

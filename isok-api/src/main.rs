@@ -1,20 +1,19 @@
-pub mod api;
-pub mod db;
-pub mod pulsar;
+use std::str::FromStr;
+
+use env_logger::{Builder as Logger, Env};
+use log::{error, info};
 
 use api::ApiHandler;
 use db::DbHandler;
-use env_logger::{Builder as Logger, Env};
-use log::{error, info};
-use std::{
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
 
 use crate::{
     api::ApiHandlerState,
     pulsar::{PulsarClient, PulsarConnectionData},
 };
+
+pub mod api;
+pub mod db;
+pub mod pulsar;
 
 /// Get env var as string or panic
 pub fn env_get(env: &'static str) -> String {
