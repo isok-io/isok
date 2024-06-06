@@ -1,4 +1,5 @@
 create type organisation_type as enum ('user', 'normal');
+create type organisation_user_role as enum ('owner', 'member');
 
 
 create table organizations
@@ -41,7 +42,8 @@ create table users_tags
 
 create table users_organizations
 (
-    user_id         uuid not null references users match simple on update no action on delete no action,
-    organization_id uuid not null references organizations match simple on update no action on delete no action,
+    user_id         uuid                   not null references users match simple on update no action on delete no action,
+    organization_id uuid                   not null references organizations match simple on update no action on delete no action,
+    role            organisation_user_role not null default 'member'::organisation_user_role,
     primary key (organization_id, user_id)
 );

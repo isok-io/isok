@@ -69,16 +69,82 @@ impl Into<UserOutput> for User {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserOrganization;
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OrganizationUserRole {
+    Owner,
+    Member,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRole {
+    pub role: OrganizationUserRole,
+    #[serde(flatten)]
+    pub user: User,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRoleOutput {
+    pub role: OrganizationUserRole,
+    #[serde(flatten)]
+    pub user: UserOutput,
+}
+
+impl Into<UserRoleOutput> for UserRole {
+    fn into(self) -> UserRoleOutput {
+        UserRoleOutput {
+            role: self.role,
+            user: self.user.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NormalOrganization {
     pub name: String,
-    pub users: Vec<User>,
+    pub users: Vec<UserRole>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NormalOrganizationOutput {
+    pub name: String,
+    pub users: Vec<UserRoleOutput>,
+}
+
+impl Into<NormalOrganizationOutput> for NormalOrganization {
+    fn into(self) -> NormalOrganizationOutput {
+        NormalOrganizationOutput {
+            name: self.name,
+            users: self.users.into_iter().map(|u| u.into()).collect(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OrganizationType {
     UserOrganization(UserOrganization),
     NormalOrganization(NormalOrganization),
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum OrganizationTypeOutput {
+    UserOrganization,
+    NormalOrganization(NormalOrganizationOutput),
+}
+
+impl Into<OrganizationTypeOutput> for OrganizationType {
+    fn into(self) -> OrganizationTypeOutput {
+        match self {
+            OrganizationType::UserOrganization(_) => OrganizationTypeOutput::UserOrganization,
+            OrganizationType::NormalOrganization(NormalOrganization { name, users }) => {
+                OrganizationTypeOutput::NormalOrganization(NormalOrganizationOutput {
+                    name,
+                    users: users.into_iter().map(|u| u.into()).collect(),
+                })
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,4 +155,27 @@ pub struct Organization {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct OrganizationInput {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OrganizationOutput {
+    pub organization_id: Uuid,
+    pub tags: HashMap<String, Option<String>>,
+    #[serde(flatten)]
+    pub organization_type: OrganizationTypeOutput,
+}
+
+impl Into<OrganizationOutput> for Organization {
+    fn into(self) -> OrganizationOutput {
+        OrganizationOutput {
+            organization_id: self.organization_id,
+            tags: self.tags,
+            organization_type: self.organization_type.into(),
+        }
+    }
 }

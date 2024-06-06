@@ -11,8 +11,9 @@ pub mod auth;
 pub mod checks;
 pub mod errors;
 pub mod middlewares;
+pub mod organizations;
 pub mod routes;
-pub mod user;
+pub mod users;
 
 #[derive(Clone)]
 pub struct ServerState {

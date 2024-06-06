@@ -70,7 +70,7 @@ pub async fn create_user(
     State(state): State<ServerState>,
     Json(user): Json<UserInput>,
 ) -> Result<(), impl IntoResponse> {
-    if let Err(e) = valid_user_input(user.clone()) {
+    if let Err(e) = valid_user_input(&user) {
         return Err(e.into_response());
     }
 
@@ -100,9 +100,7 @@ pub async fn rename_user(
         return Err(Forbidden.into_response());
     }
 
-    if let Err(e) =
-        valid_username(username.username.clone()).map_err(|e| e.with_field_name("username"))
-    {
+    if let Err(e) = valid_username(&username.username).map_err(|e| e.with_field_name("username")) {
         return Err(e.into_response());
     }
 
@@ -131,7 +129,7 @@ pub async fn change_user_email(
     }
 
     if let Err(e) =
-        valid_email(email.email_address.clone()).map_err(|e| e.with_field_name("email_address"))
+        valid_email(&email.email_address).map_err(|e| e.with_field_name("email_address"))
     {
         return Err(e.into_response());
     }
@@ -160,7 +158,7 @@ pub async fn change_user_password(
         return Err(Forbidden.into_response());
     }
 
-    valid_password(password.old_password.clone())
+    valid_password(&password.old_password)
         .map_err(|e| e.with_field_name("old_password").into_response())
         .and(
             PasswordHashString::parse(current_user.password.as_str(), Encoding::B64)
@@ -178,7 +176,7 @@ pub async fn change_user_password(
             }
         })?;
 
-    valid_password(password.new_password.clone())
+    valid_password(&password.new_password)
         .map_err(|e| e.with_field_name("new_password").into_response())?;
 
     if password.new_password != password.confirm_password {

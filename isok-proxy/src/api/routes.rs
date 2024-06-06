@@ -6,7 +6,10 @@ pub use axum::{middleware, Router};
 pub use crate::api::auth::login_handler;
 use crate::api::checks::{change_check_interval, change_check_kind, change_check_max_latency};
 pub use crate::api::checks::{create_check, delete_check, get_check, list_checks};
-pub use crate::api::user::{
+pub use crate::api::organizations::{
+    create_organization, delete_organization, get_organization, list_organizations,
+};
+pub use crate::api::users::{
     change_user_email, change_user_password, create_user, delete_user, get_user, list_users,
     rename_user,
 };
@@ -21,7 +24,8 @@ pub fn app(server_state: ServerState) -> Router<()> {
             "/checks/:organization_id",
             checks_router(server_state.clone()),
         )
-        .nest("/users", users_router(server_state))
+        .nest("/users", users_router(server_state.clone()))
+        .nest("/organizations", organizations_router(server_state))
 }
 
 pub fn auth_routes(server_state: ServerState) -> Router<()> {
@@ -48,6 +52,7 @@ pub fn users_router(server_state: ServerState) -> Router<()> {
         .route("/", post(create_user))
         .with_state(server_state)
 }
+
 pub fn checks_router(server_state: ServerState) -> Router<()> {
     Router::new()
         .route("/", get(list_checks))
@@ -57,6 +62,19 @@ pub fn checks_router(server_state: ServerState) -> Router<()> {
         .route("/:id/interval", put(change_check_interval))
         .route("/:id/max_latency", put(change_check_max_latency))
         .route("/:id", delete(delete_check))
+        .route_layer(middleware::from_fn_with_state(
+            server_state.clone(),
+            crate::api::middlewares::middleware,
+        ))
+        .with_state(server_state)
+}
+
+pub fn organizations_router(server_state: ServerState) -> Router<()> {
+    Router::new()
+        .route("/", get(list_organizations))
+        .route("/:id", get(get_organization))
+        .route("/", post(create_organization))
+        .route("/:id", delete(delete_organization))
         .route_layer(middleware::from_fn_with_state(
             server_state.clone(),
             crate::api::middlewares::middleware,

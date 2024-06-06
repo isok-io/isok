@@ -27,9 +27,9 @@ pub async fn login_handler(
     State(state): State<ServerState>,
     Json(payload): Json<Login>,
 ) -> Result<String, impl IntoResponse> {
-    valid_email(payload.login.clone())
+    valid_email(&payload.login)
         .map_err(|e| e.with_field_name("login"))
-        .and(valid_password(payload.password.clone()).map_err(|e| e.with_field_name("password")))
+        .and(valid_password(&payload.password).map_err(|e| e.with_field_name("password")))
         .map_err(|e| e.into_response())?;
 
     let user_password = match state
