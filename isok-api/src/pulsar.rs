@@ -63,7 +63,7 @@ impl PulsarClient {
     pub async fn add_check(&mut self, check: Check) {
         let a = self
             .producer
-            .send(Command::new_add_command(check.clone()))
+            .send_non_blocking(Command::new_add_command(check.clone()))
             .await;
         match a {
             Ok(a) => match a.await {
@@ -77,7 +77,7 @@ impl PulsarClient {
     pub async fn remove_check(&mut self, check: Check) {
         let a = self
             .producer
-            .send(Command::new_remove_command(check.clone()))
+            .send_non_blocking(Command::new_remove_command(check.clone()))
             .await;
         match a {
             Ok(_) => match a {
