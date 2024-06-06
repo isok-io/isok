@@ -13,7 +13,8 @@ pub struct CheckMessage {
     pub check_id: Uuid,
     pub agent_id: String,
     pub timestamp: DateTime<FixedOffset>,
-    pub latency: Duration,
+    /// Latency in milliseconds
+    pub latency: u64,
     pub fields: serde_json::Value,
 }
 
@@ -92,7 +93,7 @@ impl<A: Serialize + DeserializeOwned> CheckResult<A> {
             check_id,
             agent_id,
             timestamp: self.timestamp,
-            latency: self.latency,
+            latency: self.latency.as_millis() as u64,
             fields: serde_json::to_value(&self.fields).unwrap(), //cannot fail
         }
     }
@@ -113,7 +114,7 @@ impl<A: Serialize + DeserializeOwned + Debug> Into<CheckData<A>> for CheckMessag
             check_id: self.check_id,
             agent_id: self.agent_id,
             timestamp: self.timestamp,
-            latency: self.latency,
+            latency: Duration::from_millis(self.latency),
             fields: serde_json::from_value(self.fields).unwrap(), //cannot fail
         }
     }

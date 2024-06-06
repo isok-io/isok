@@ -13,6 +13,7 @@ pub use serde::Deserializer;
 
 pub use isok_data::check::LinkParseError;
 
+#[cfg(not(feature = "env_config"))]
 pub use crate::Cli;
 
 #[derive(Debug, Clone)]
@@ -116,6 +117,7 @@ pub struct Config {
 }
 
 impl IncompleteConfig {
+    #[cfg(not(feature = "env_config"))]
     pub fn from_file<P: AsRef<Path>>(
         path: P,
     ) -> Result<Result<Self, toml::de::Error>, std::io::Error> {
@@ -166,6 +168,7 @@ impl IncompleteConfig {
         }
     }
 
+    #[cfg(not(feature = "env_config"))]
     pub fn from_cli(cli: Cli) -> Self {
         Self {
             address: cli.address,
