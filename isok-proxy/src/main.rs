@@ -3,14 +3,12 @@ pub use std::sync::Arc;
 
 pub use argon2::Params;
 pub use biscuit_auth::PrivateKey;
+#[cfg(not(feature = "env_config"))]
+pub use clap::Parser;
 pub use env_logger::{Builder as Logger, Env};
 pub use log::{debug, error, info};
 
 pub use crate::api::{routes, ServerState};
-
-#[cfg(not(feature = "env_config"))]
-pub use clap::Parser;
-
 pub use crate::config::IncompleteConfig;
 pub use crate::db::DbHandler;
 
