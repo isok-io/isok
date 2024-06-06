@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use futures::future::BoxFuture;
 use futures::FutureExt;
@@ -40,6 +41,15 @@ impl Into<OrganizationUserRole> for OrgUserRole {
         match self {
             OrgUserRole::Owner => OrganizationUserRole::Owner,
             OrgUserRole::Member => OrganizationUserRole::Member,
+        }
+    }
+}
+
+impl From<OrganizationUserRole> for OrgUserRole {
+    fn from(value: OrganizationUserRole) -> Self {
+        match value {
+            OrganizationUserRole::Owner => Self::Owner,
+            OrganizationUserRole::Member => Self::Member,
         }
     }
 }
@@ -523,6 +533,58 @@ VALUES ($1, $2, 'owner'::organisation_user_role)
         sqlx::query!(
             r#"UPDATE organizations SET deleted_at = $1 WHERE organization_id = $2"#,
             now,
+            organization_id
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(DbQueryError)
+    }
+
+    pub async fn add_user_in_organization(
+        &self,
+        email: String,
+        role: OrganizationUserRole,
+        organization_id: Uuid,
+    ) -> Result<(), DbQueryError> {
+        sqlx::query!(
+            r#"INSERT INTO users_organizations (organization_id, user_id, role) SELECT $1, user_id, $2 FROM users WHERE email_address = $3"#,
+            organization_id,
+            OrgUserRole::from(role) as OrgUserRole,
+            email
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(DbQueryError)
+    }
+
+    pub async fn change_user_role_in_organization(
+        &self,
+        user_id: Uuid,
+        role: OrganizationUserRole,
+        organization_id: Uuid,
+    ) -> Result<(), DbQueryError> {
+        sqlx::query!(
+            r#"UPDATE users_organizations SET role = $1 WHERE user_id = $2 AND organization_id = $3"#,
+            OrgUserRole::from(role) as OrgUserRole,
+            user_id,
+            organization_id
+        )
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(DbQueryError)
+    }
+
+    pub async fn delete_user_in_organization(
+        &self,
+        user_id: Uuid,
+        organization_id: Uuid,
+    ) -> Result<(), DbQueryError> {
+        sqlx::query!(
+            r#"DELETE FROM users_organizations WHERE user_id = $1 AND organization_id = $2"#,
+            user_id,
             organization_id
         )
         .execute(&self.pool)

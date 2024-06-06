@@ -416,3 +416,28 @@ pub mod validator {
             .and(valid_email(&user.email_address).map_err(|e| e.with_field_name("email_address")))
     }
 }
+
+pub mod organization {
+    use uuid::Uuid;
+
+    use isok_data::owner::{
+        NormalOrganization, Organization, OrganizationType, OrganizationUserRole,
+    };
+
+    pub fn is_owner(user_id: &Uuid, organization: &Organization) -> bool {
+        if let OrganizationType::NormalOrganization(NormalOrganization { users, .. }) =
+            &organization.organization_type
+        {
+            if users
+                .iter()
+                .filter(|u| u.user.user_id == *user_id && u.role == OrganizationUserRole::Owner)
+                .last()
+                .is_none()
+            {
+                return false;
+            }
+        }
+
+        true
+    }
+}

@@ -6,6 +6,9 @@ pub use axum::{middleware, Router};
 pub use crate::api::auth::login_handler;
 use crate::api::checks::{change_check_interval, change_check_kind, change_check_max_latency};
 pub use crate::api::checks::{create_check, delete_check, get_check, list_checks};
+use crate::api::organizations::{
+    add_member_to_organization, change_member_role_in_organization, delete_member_in_organization,
+};
 pub use crate::api::organizations::{
     create_organization, delete_organization, get_organization, list_organizations,
 };
@@ -75,6 +78,15 @@ pub fn organizations_router(server_state: ServerState) -> Router<()> {
         .route("/:id", get(get_organization))
         .route("/", post(create_organization))
         .route("/:id", delete(delete_organization))
+        .route("/:id/members", post(add_member_to_organization))
+        .route(
+            "/:id/members/:user_id",
+            put(change_member_role_in_organization),
+        )
+        .route(
+            "/:id/members/:user_id",
+            delete(delete_member_in_organization),
+        )
         .route_layer(middleware::from_fn_with_state(
             server_state.clone(),
             crate::api::middlewares::middleware,
