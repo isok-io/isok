@@ -1,15 +1,13 @@
-pub use std::sync::Arc;
-
 pub use axum::extract::{Request, State};
 pub use axum::middleware::Next;
 pub use axum::response::{IntoResponse, Response};
 
 pub use crate::api::errors::Unauthorized;
-pub use crate::api::AuthHandler;
+use crate::api::ServerState;
 pub use crate::utils::auth::token::get_user_id_from_token;
 
 pub async fn middleware(
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     mut request: Request,
     next: Next,
 ) -> Response {

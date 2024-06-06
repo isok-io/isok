@@ -7,7 +7,8 @@ pub use clap::Parser;
 pub use env_logger::{Builder as Logger, Env};
 pub use log::{debug, error, info};
 
-pub use crate::api::{routes, ApiHandler, AuthHandler};
+pub use crate::api::routes;
+use crate::api::ServerState;
 pub use crate::config::IncompleteConfig;
 pub use crate::db::DbHandler;
 
@@ -103,22 +104,17 @@ async fn main() {
         config.address.clone(),
         config.port
     );
-    let app = routes::app(
-        Arc::new(ApiHandler {
-            apis: config
-                .apis
-                .iter()
-                .map(|(key, value)| (key.to_owned(), value.to_owned().uri.into()))
-                .collect(),
-        }),
-        Arc::new(AuthHandler {
-            private_key: PrivateKey::from_bytes_hex(config.token.as_str())
+    let app = routes::app(ServerState {
+        private_key: Arc::new(
+            PrivateKey::from_bytes_hex(config.token.as_str())
                 .map_err(|e| {
                     error!("Failed to parse token: {e}");
                     std::process::exit(1)
                 })
                 .unwrap(),
-            argon2_params: Params::new(
+        ),
+        argon2_params: Arc::new(
+            Params::new(
                 config.hash_m_cost,
                 config.hash_t_cost,
                 config.hash_p_cost,
@@ -129,9 +125,16 @@ async fn main() {
                 std::process::exit(1);
             })
             .unwrap(),
-            db: DbHandler::connect(config.db).await.unwrap(),
-        }),
-    );
+        ),
+        db: Arc::new(DbHandler::connect(config.db).await.unwrap()),
+        apis: Arc::new(
+            config
+                .apis
+                .iter()
+                .map(|(key, value)| (key.to_owned(), value.to_owned().uri.into()))
+                .collect(),
+        ),
+    });
 
     let listener = tokio::net::TcpListener::bind(format!("{}:{}", config.address, config.port,))
         .await

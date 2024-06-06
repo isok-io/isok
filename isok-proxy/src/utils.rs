@@ -1,4 +1,6 @@
 pub mod proxy {
+    use std::collections::HashMap;
+    use std::fmt::Display;
     pub use std::sync::Arc;
     pub use std::time::Duration;
 
@@ -11,8 +13,7 @@ pub mod proxy {
     pub use serde::de::DeserializeOwned;
     use serde::Serialize;
 
-    use crate::api::errors::{Body, NotFoundError, RegionNotFound, ReqwestError, ReqwestErrors};
-    pub use crate::api::ApiHandler;
+    use crate::api::errors::{Body, NotFoundError, RegionNotFound, ReqwestError};
 
     #[derive(Clone)]
     struct Response {
@@ -20,8 +21,9 @@ pub mod proxy {
         body: String,
     }
 
-    pub async fn get_all<T>(state: Arc<ApiHandler>, path: &str) -> Vec<T>
+    pub async fn get_all<P, T>(apis: Arc<HashMap<String, Uri>>, path: P) -> Vec<T>
     where
+        P: Display,
         T: DeserializeOwned + Clone,
     {
         let client = ClientBuilder::new()
@@ -30,7 +32,7 @@ pub mod proxy {
             .unwrap();
         let mut res: Vec<Vec<T>> = Vec::new();
 
-        for uri in state.apis.values() {
+        for uri in apis.values() {
             trace!("Proxying to {uri}...");
             let r = match client
                 .get(format!("{uri}{path}"))
@@ -54,8 +56,9 @@ pub mod proxy {
         res.iter().flatten().map(|e| e.to_owned()).collect()
     }
 
-    pub async fn get_one<T>(state: Arc<ApiHandler>, path: &str, id: String) -> Option<T>
+    pub async fn get_one<P, T>(apis: Arc<HashMap<String, Uri>>, path: P, id: String) -> Option<T>
     where
+        P: Display,
         T: DeserializeOwned + Clone,
     {
         let client = ClientBuilder::new()
@@ -63,7 +66,7 @@ pub mod proxy {
             .build()
             .unwrap();
 
-        for uri in state.apis.values() {
+        for uri in apis.values() {
             let r = match client
                 .get(format!("{uri}{path}/{id}"))
                 .timeout(Duration::from_secs(15))
@@ -88,19 +91,20 @@ pub mod proxy {
         None
     }
 
-    pub async fn create<T>(
-        state: Arc<ApiHandler>,
-        path: &str,
+    pub async fn create<P, T>(
+        apis: Arc<HashMap<String, Uri>>,
+        path: P,
         region: String,
         data: T,
     ) -> impl IntoResponse
     where
+        P: Display,
         T: Serialize + Clone,
     {
-        if !state.apis.contains_key(&region) {
+        if !apis.contains_key(&region) {
             return RegionNotFound(region).into_response();
         }
-        let region = state.apis.get(&region).unwrap();
+        let region = apis.get(&region).unwrap();
 
         let client = ClientBuilder::new()
             .default_headers(HeaderMap::new())
@@ -128,7 +132,7 @@ pub mod proxy {
     }
 
     pub async fn update<T>(
-        state: Arc<ApiHandler>,
+        apis: Arc<HashMap<String, Uri>>,
         path: &str,
         region: Option<String>,
         data: T,
@@ -143,10 +147,10 @@ pub mod proxy {
 
         let res = match region {
             Some(region) => {
-                if !state.apis.contains_key(&region) {
+                if !apis.contains_key(&region) {
                     return RegionNotFound(region).into_response();
                 }
-                let region = state.apis.get(&region).unwrap();
+                let region = apis.get(&region).unwrap();
                 match client
                     .put(format!("{region}{path}"))
                     .json(&data)
@@ -165,7 +169,7 @@ pub mod proxy {
             None => {
                 let mut res: Result<Response, ReqwestError> =
                     Err(ReqwestError::none(Uri::default()));
-                for uri in state.apis.values() {
+                for uri in apis.values() {
                     let r = match client
                         .put(format!("{uri}{path}"))
                         .json(&data)
@@ -201,13 +205,20 @@ pub mod proxy {
         }
     }
 
-    pub async fn delete(state: Arc<ApiHandler>, path: &str, id: String) -> impl IntoResponse {
+    pub async fn delete<P>(
+        apis: Arc<HashMap<String, Uri>>,
+        path: P,
+        id: String,
+    ) -> impl IntoResponse
+    where
+        P: Display,
+    {
         let client = ClientBuilder::new()
             .default_headers(HeaderMap::new())
             .build()
             .unwrap();
 
-        for uri in state.apis.values() {
+        for uri in apis.values() {
             let r = match client
                 .delete(format!("{uri}{path}/{id}"))
                 .timeout(Duration::from_secs(15))

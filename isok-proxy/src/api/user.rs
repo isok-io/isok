@@ -4,6 +4,7 @@ pub use argon2::password_hash::{Encoding, PasswordHashString};
 pub use axum::extract::{Path, State};
 pub use axum::response::IntoResponse;
 pub use axum::{Extension, Json};
+use log::info;
 pub use serde::{Deserialize, Serialize};
 use sqlx::Error;
 pub use uuid::Uuid;
@@ -15,7 +16,7 @@ use crate::api::errors::DbQueryError;
 pub use crate::api::errors::{
     Forbidden, InvalidInput, NotFoundError, PasswordHashError, WrongCredentials,
 };
-pub use crate::api::AuthHandler;
+use crate::api::ServerState;
 pub use crate::utils::validator::{valid_email, valid_password, valid_user_input, valid_username};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,19 +37,22 @@ pub struct PasswordInput {
 }
 
 pub async fn list_users(
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
 ) -> Result<Json<Vec<UserOutput>>, impl IntoResponse> {
     state.db.get_users().await.map(|users| {
         users
             .into_iter()
-            .map(|user| user.into())
+            .map(|user| {
+                info!("{user:#?}");
+                user.into()
+            })
             .collect::<Vec<UserOutput>>()
             .into()
     })
 }
 
 pub async fn get_user(
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<UserOutput>, impl IntoResponse> {
     match state.db.get_user(id).await {
@@ -63,7 +67,7 @@ pub async fn get_user(
 }
 
 pub async fn create_user(
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     Json(user): Json<UserInput>,
 ) -> Result<(), impl IntoResponse> {
     if let Err(e) = valid_user_input(user.clone()) {
@@ -88,11 +92,11 @@ pub async fn create_user(
 
 pub async fn rename_user(
     Extension(current_user): Extension<User>,
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     Json(username): Json<UsernameInput>,
 ) -> Result<(), impl IntoResponse> {
-    if id != current_user.owner_id {
+    if id != current_user.user_id {
         return Err(Forbidden.into_response());
     }
 
@@ -118,11 +122,11 @@ pub async fn rename_user(
 
 pub async fn change_user_email(
     Extension(current_user): Extension<User>,
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     Json(email): Json<EmailInput>,
 ) -> Result<(), impl IntoResponse> {
-    if id != current_user.owner_id {
+    if id != current_user.user_id {
         return Err(Forbidden.into_response());
     }
 
@@ -148,11 +152,11 @@ pub async fn change_user_email(
 
 pub async fn change_user_password(
     Extension(current_user): Extension<User>,
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     Json(password): Json<PasswordInput>,
 ) -> Result<(), impl IntoResponse> {
-    if id != current_user.owner_id {
+    if id != current_user.user_id {
         return Err(Forbidden.into_response());
     }
 
@@ -208,11 +212,11 @@ pub async fn change_user_password(
 }
 
 pub async fn delete_user(
-    State(state): State<Arc<AuthHandler>>,
+    State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     Extension(current_user): Extension<User>,
 ) -> Result<(), impl IntoResponse> {
-    if id != current_user.owner_id {
+    if id != current_user.user_id {
         return Err(Forbidden.into_response());
     }
 

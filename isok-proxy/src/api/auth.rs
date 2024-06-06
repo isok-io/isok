@@ -1,6 +1,5 @@
-pub use std::sync::Arc;
-
 pub use argon2::password_hash::{Encoding, PasswordHashString};
+use axum::extract::State;
 pub use axum::response::IntoResponse;
 pub use axum::Json;
 pub use serde::Deserialize;
@@ -8,7 +7,7 @@ pub use uuid::Uuid;
 
 use crate::api::errors::BiscuitError;
 pub use crate::api::errors::{PasswordHashError, WrongCredentials};
-pub use crate::api::AuthHandler;
+use crate::api::ServerState;
 pub use crate::utils::auth::password::verify_password;
 pub use crate::utils::auth::token::build_token;
 pub use crate::utils::validator::{valid_email, valid_password};
@@ -25,8 +24,8 @@ pub struct UserPassword {
 }
 
 pub async fn login_handler(
+    State(state): State<ServerState>,
     Json(payload): Json<Login>,
-    state: Arc<AuthHandler>,
 ) -> Result<String, impl IntoResponse> {
     valid_email(payload.login.clone())
         .map_err(|e| e.with_field_name("login"))

@@ -1,10 +1,16 @@
+use std::collections::HashMap;
+
+use futures::future::BoxFuture;
+use futures::FutureExt;
 use log::error;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::types::chrono::Utc;
+use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use isok_data::owner::{User, UserInput};
+use isok_data::owner::{
+    NormalOrganization, Organization, OrganizationType, User, UserInput, UserOrganization,
+};
 
 use crate::api::auth::UserPassword;
 use crate::api::errors::DbQueryError;
@@ -12,6 +18,13 @@ use crate::api::errors::DbQueryError;
 #[derive(Clone, Debug)]
 pub struct DbHandler {
     pool: PgPool,
+}
+
+#[derive(sqlx::Type, Debug)]
+#[sqlx(type_name = "organisation_type", rename_all = "lowercase")]
+enum OrgType {
+    User,
+    Normal,
 }
 
 impl DbHandler {
@@ -45,46 +58,250 @@ impl DbHandler {
         .map_err(DbQueryError)
     }
 
+    fn parse_organization(
+        &self,
+        organization_id: Uuid,
+        org_type: OrgType,
+        name: Option<String>,
+        created_at: DateTime<Utc>,
+        updated_at: DateTime<Utc>,
+        deleted_at: Option<DateTime<Utc>>,
+    ) -> BoxFuture<Result<Organization, DbQueryError>> {
+        async move {
+            Ok(Organization {
+                organization_id,
+                tags: sqlx::query!(
+                r#"SELECT key, value FROM organizations_tags WHERE organization_id = $1"#,
+                organization_id
+            )
+                    .fetch_all(&self.pool)
+                    .await
+                    .map_err(DbQueryError)
+                    .map(|records| {
+                        records
+                            .into_iter()
+                            .map(|record| (record.key, record.value))
+                            .collect()
+                    })?,
+                organization_type: match org_type {
+                    OrgType::User => OrganizationType::UserOrganization(UserOrganization),
+                    OrgType::Normal => {
+                        let rows = sqlx::query!(
+                        r#"SELECT u.user_id, u.username, u.password, u.email_address, u.created_at, u.updated_at, u.deleted_at, o.organization_id, o.type as "type!: OrgType", o.name, o.created_at as org_created_at, o.updated_at as org_updated_at, o.deleted_at as org_deleted_at FROM users_organizations as uo JOIN users as u on uo.user_id = u.user_id JOIN organizations o on o.organization_id = u.self_organization WHERE uo.organization_id = $1 AND u.deleted_at IS NULL"#,
+                        organization_id
+                    )
+                            .fetch_all(&self.pool)
+                            .await
+                            .map_err(DbQueryError)?;
+                        let mut users = vec![];
+                        for row in rows {
+                            users.push(
+                                self.parse_user_with_organization(
+                                    row.user_id,
+                                    row.username,
+                                    row.password,
+                                    row.email_address,
+                                    sqlx::query!(
+                                            r#"SELECT key, value FROM users_tags WHERE user_id = $1"#,
+                                            row.user_id
+                                        )
+                                        .fetch_all(&self.pool)
+                                        .await
+                                        .map_err(DbQueryError)
+                                        .map(|records| {
+                                            records
+                                                .into_iter()
+                                                .map(|record| (record.key, record.value))
+                                                .collect()
+                                        })?,
+                                    row.created_at,
+                                    row.updated_at,
+                                    row.deleted_at,
+                                    row.organization_id,
+                                    row.r#type,
+                                    row.name,
+                                    row.org_created_at,
+                                    row.org_updated_at,
+                                    row.org_deleted_at,
+                                )
+                                    .await?,
+                            );
+                        }
+                        OrganizationType::NormalOrganization(NormalOrganization {
+                            name: name.ok_or(DbQueryError(sqlx::Error::RowNotFound))?,
+                            users,
+                        })
+                    }
+                },
+                created_at,
+                updated_at,
+                deleted_at,
+            })
+        }.boxed()
+    }
+
+    async fn parse_user_with_organization(
+        &self,
+        user_id: Uuid,
+        username: String,
+        password: String,
+        email_address: String,
+        tags: HashMap<String, Option<String>>,
+        created_at: DateTime<Utc>,
+        updated_at: DateTime<Utc>,
+        deleted_at: Option<DateTime<Utc>>,
+        organization_id: Uuid,
+        org_type: OrgType,
+        name: Option<String>,
+        org_created_at: DateTime<Utc>,
+        org_updated_at: DateTime<Utc>,
+        org_deleted_at: Option<DateTime<Utc>>,
+    ) -> Result<User, DbQueryError> {
+        Ok(User {
+            user_id,
+            username,
+            password,
+            email_address,
+            self_organization: self
+                .parse_organization(
+                    organization_id,
+                    org_type,
+                    name,
+                    org_created_at,
+                    org_updated_at,
+                    org_deleted_at,
+                )
+                .await?,
+            tags,
+            created_at,
+            updated_at,
+            deleted_at,
+        })
+    }
+
     pub async fn get_users(&self) -> Result<Vec<User>, DbQueryError> {
-        sqlx::query_as!(
-            User,
+        let rows = sqlx::query!(
             r#"
-                SELECT user_id as owner_id, username, password, email_address, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL
+                SELECT u.user_id, u.username, u.password, u.email_address, u.created_at, u.updated_at, u.deleted_at, o.organization_id, o.type as "type!: OrgType", o.name, o.created_at as org_created_at, o.updated_at as org_updated_at, o.deleted_at as org_deleted_at FROM users as u JOIN organizations o on o.organization_id = u.self_organization WHERE u.deleted_at IS NULL
             "#
         )
             .fetch_all(&self.pool)
-            .await.map_err(DbQueryError)
+            .await.map_err(DbQueryError)?;
+
+        let mut users = vec![];
+
+        for row in rows {
+            users.push(
+                self.parse_user_with_organization(
+                    row.user_id,
+                    row.username,
+                    row.password,
+                    row.email_address,
+                    sqlx::query!(
+                        r#"SELECT key, value FROM users_tags WHERE user_id = $1"#,
+                        row.user_id
+                    )
+                    .fetch_all(&self.pool)
+                    .await
+                    .map_err(DbQueryError)
+                    .map(|records| {
+                        records
+                            .into_iter()
+                            .map(|record| (record.key, record.value))
+                            .collect()
+                    })?,
+                    row.created_at,
+                    row.updated_at,
+                    row.deleted_at,
+                    row.organization_id,
+                    row.r#type,
+                    row.name,
+                    row.org_created_at,
+                    row.org_updated_at,
+                    row.org_deleted_at,
+                )
+                .await?,
+            )
+        }
+
+        Ok(users)
     }
 
     pub async fn get_user(&self, user_id: Uuid) -> Result<User, DbQueryError> {
-        sqlx::query_as!(
-            User,
+        let row = sqlx::query!(
             r#"
-                SELECT user_id as owner_id, username, password, email_address, created_at, updated_at, deleted_at FROM users WHERE user_id = $1 AND deleted_at IS NULL
+                SELECT u.user_id, u.username, u.password, u.email_address, u.created_at, u.updated_at, u.deleted_at, o.organization_id, o.type as "type!: OrgType", o.name, o.created_at as org_created_at, o.updated_at as org_updated_at, o.deleted_at as org_deleted_at FROM users as u JOIN organizations o on o.organization_id = u.self_organization WHERE u.user_id = $1 AND u.deleted_at IS NULL
             "#, user_id
         )
             .fetch_one(&self.pool)
-            .await.map_err(DbQueryError)
+            .await.map_err(DbQueryError)?;
+
+        self.parse_user_with_organization(
+            row.user_id,
+            row.username,
+            row.password,
+            row.email_address,
+            sqlx::query!(
+                r#"SELECT key, value FROM users_tags WHERE user_id = $1"#,
+                row.user_id
+            )
+            .fetch_all(&self.pool)
+            .await
+            .map_err(DbQueryError)
+            .map(|records| {
+                records
+                    .into_iter()
+                    .map(|record| (record.key, record.value))
+                    .collect()
+            })?,
+            row.created_at,
+            row.updated_at,
+            row.deleted_at,
+            row.organization_id,
+            row.r#type,
+            row.name,
+            row.org_created_at,
+            row.org_updated_at,
+            row.org_deleted_at,
+        )
+        .await
     }
 
     pub async fn insert_user(&self, user: UserInput) -> Result<(), DbQueryError> {
+        let mut transaction = self.pool.begin().await.map_err(DbQueryError)?;
         let now = Utc::now();
+
+        let organization_id = sqlx::query!(
+            r#"
+INSERT INTO organizations (type, created_at, updated_at)
+VALUES ('user', $1, $2) RETURNING organization_id
+        "#,
+            now,
+            now
+        )
+        .fetch_one(transaction.as_mut())
+        .await
+        .map(|row| row.organization_id)
+        .map_err(DbQueryError)?;
 
         sqlx::query!(
             r#"
-INSERT INTO users (username, password, email_address, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users (username, password, email_address, self_organization, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
         "#,
             user.username,
             user.password,
             user.email_address,
+            organization_id,
             now,
             now
         )
-        .execute(&self.pool)
+        .execute(transaction.as_mut())
         .await
         .map(|_| ())
-        .map_err(DbQueryError)
+        .map_err(DbQueryError)?;
+
+        transaction.commit().await.map_err(DbQueryError)
     }
 
     pub async fn update_user_username(
@@ -145,14 +362,45 @@ UPDATE users SET password = $1, updated_at = $2 WHERE user_id = $3
     }
 
     pub async fn delete_user(&self, user_id: Uuid) -> Result<(), DbQueryError> {
+        let now = Utc::now();
+
         sqlx::query!(
             r#"
 UPDATE users SET deleted_at = $1 WHERE user_id = $2
         "#,
-            Utc::now(),
+            now,
             user_id
         )
         .execute(&self.pool)
+        .await
+        .map_err(DbQueryError)?;
+
+        sqlx::query!(
+            r#"
+UPDATE organizations SET deleted_at = $1 WHERE organization_id = (SELECT self_organization FROM users WHERE user_id = $2)
+        "#,
+            now,
+            user_id
+        )
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(DbQueryError)
+    }
+
+    pub async fn is_user_in_organization(
+        &self,
+        user_id: &Uuid,
+        organization_id: &Uuid,
+    ) -> Result<(), DbQueryError> {
+        sqlx::query!(
+            r#"
+SELECT 1 as x FROM users_organizations WHERE user_id = $1 AND organization_id = $2
+        "#,
+            user_id,
+            organization_id
+        )
+        .fetch_one(&self.pool)
         .await
         .map(|_| ())
         .map_err(DbQueryError)
