@@ -11,6 +11,6 @@ pub async fn pulsar_sink(
     mut receiver: Receiver<CheckMessage>,
 ) {
     while let Some(check_msg) = receiver.recv().await {
-        let _ = producer.send(check_msg).await;
+        let _ = producer.send_non_blocking(check_msg).await;
     }
 }
