@@ -1,4 +1,6 @@
 pub mod proxy {
+    use std::collections::HashMap;
+    use std::fmt::Display;
     pub use std::sync::Arc;
     pub use std::time::Duration;
 
@@ -11,8 +13,7 @@ pub mod proxy {
     pub use serde::de::DeserializeOwned;
     use serde::Serialize;
 
-    use crate::api::errors::{Body, NotFoundError, RegionNotFound, ReqwestError, ReqwestErrors};
-    pub use crate::api::ApiHandler;
+    use crate::api::errors::{Body, NotFoundError, RegionNotFound, ReqwestError};
 
     #[derive(Clone)]
     struct Response {
@@ -20,8 +21,9 @@ pub mod proxy {
         body: String,
     }
 
-    pub async fn get_all<T>(state: Arc<ApiHandler>, path: &str) -> Vec<T>
+    pub async fn get_all<P, T>(apis: Arc<HashMap<String, Uri>>, path: P) -> Vec<T>
     where
+        P: Display,
         T: DeserializeOwned + Clone,
     {
         let client = ClientBuilder::new()
@@ -30,7 +32,7 @@ pub mod proxy {
             .unwrap();
         let mut res: Vec<Vec<T>> = Vec::new();
 
-        for uri in state.apis.values() {
+        for uri in apis.values() {
             trace!("Proxying to {uri}...");
             let r = match client
                 .get(format!("{uri}{path}"))
@@ -54,8 +56,9 @@ pub mod proxy {
         res.iter().flatten().map(|e| e.to_owned()).collect()
     }
 
-    pub async fn get_one<T>(state: Arc<ApiHandler>, path: &str, id: String) -> Option<T>
+    pub async fn get_one<P, T>(apis: Arc<HashMap<String, Uri>>, path: P, id: String) -> Option<T>
     where
+        P: Display,
         T: DeserializeOwned + Clone,
     {
         let client = ClientBuilder::new()
@@ -63,7 +66,7 @@ pub mod proxy {
             .build()
             .unwrap();
 
-        for uri in state.apis.values() {
+        for uri in apis.values() {
             let r = match client
                 .get(format!("{uri}{path}/{id}"))
                 .timeout(Duration::from_secs(15))
@@ -88,19 +91,20 @@ pub mod proxy {
         None
     }
 
-    pub async fn create<T>(
-        state: Arc<ApiHandler>,
-        path: &str,
+    pub async fn create<P, T>(
+        apis: Arc<HashMap<String, Uri>>,
+        path: P,
         region: String,
         data: T,
     ) -> impl IntoResponse
     where
+        P: Display,
         T: Serialize + Clone,
     {
-        if !state.apis.contains_key(&region) {
+        if !apis.contains_key(&region) {
             return RegionNotFound(region).into_response();
         }
-        let region = state.apis.get(&region).unwrap();
+        let region = apis.get(&region).unwrap();
 
         let client = ClientBuilder::new()
             .default_headers(HeaderMap::new())
@@ -128,7 +132,7 @@ pub mod proxy {
     }
 
     pub async fn update<T>(
-        state: Arc<ApiHandler>,
+        apis: Arc<HashMap<String, Uri>>,
         path: &str,
         region: Option<String>,
         data: T,
@@ -143,10 +147,10 @@ pub mod proxy {
 
         let res = match region {
             Some(region) => {
-                if !state.apis.contains_key(&region) {
+                if !apis.contains_key(&region) {
                     return RegionNotFound(region).into_response();
                 }
-                let region = state.apis.get(&region).unwrap();
+                let region = apis.get(&region).unwrap();
                 match client
                     .put(format!("{region}{path}"))
                     .json(&data)
@@ -165,7 +169,7 @@ pub mod proxy {
             None => {
                 let mut res: Result<Response, ReqwestError> =
                     Err(ReqwestError::none(Uri::default()));
-                for uri in state.apis.values() {
+                for uri in apis.values() {
                     let r = match client
                         .put(format!("{uri}{path}"))
                         .json(&data)
@@ -201,13 +205,20 @@ pub mod proxy {
         }
     }
 
-    pub async fn delete(state: Arc<ApiHandler>, path: &str, id: String) -> impl IntoResponse {
+    pub async fn delete<P>(
+        apis: Arc<HashMap<String, Uri>>,
+        path: P,
+        id: String,
+    ) -> impl IntoResponse
+    where
+        P: Display,
+    {
         let client = ClientBuilder::new()
             .default_headers(HeaderMap::new())
             .build()
             .unwrap();
 
-        for uri in state.apis.values() {
+        for uri in apis.values() {
             let r = match client
                 .delete(format!("{uri}{path}/{id}"))
                 .timeout(Duration::from_secs(15))
@@ -331,7 +342,7 @@ pub mod validator {
 
     pub use crate::api::errors::InvalidInput;
 
-    pub fn valid_email<'a>(email: String) -> Result<(), InvalidInput<&'a str, &'a str>> {
+    pub fn valid_email<'a>(email: &String) -> Result<(), InvalidInput<&'a str, &'a str>> {
         let email_regex = Regex::new(
             r#"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"#,
         )
@@ -344,7 +355,7 @@ pub mod validator {
         }
     }
 
-    pub fn valid_password<'a>(password: String) -> Result<(), InvalidInput<&'a str, &'a str>> {
+    pub fn valid_password<'a>(password: &String) -> Result<(), InvalidInput<&'a str, &'a str>> {
         if (8..=128).contains(&password.len()) {
             Ok(())
         } else {
@@ -352,7 +363,7 @@ pub mod validator {
         }
     }
 
-    pub fn valid_string<'a>(string: String) -> Result<(), InvalidInput<&'a str, &'a str>> {
+    pub fn valid_string<'a>(string: &String) -> Result<(), InvalidInput<&'a str, &'a str>> {
         if !string.is_empty() && !string.starts_with(' ') {
             Ok(())
         } else {
@@ -360,8 +371,19 @@ pub mod validator {
         }
     }
 
-    pub fn valid_username<'a>(username: String) -> Result<(), InvalidInput<&'a str, &'a str>> {
-        valid_string(username.clone())
+    pub fn valid_string_with_max_len<'a>(
+        string: &String,
+        len: usize,
+    ) -> Result<(), InvalidInput<&'a str, &'a str>> {
+        if string.len() <= len && valid_string(string).is_ok() {
+            Ok(())
+        } else {
+            Err(InvalidInput::new("Invalid field"))
+        }
+    }
+
+    pub fn valid_username<'a>(username: &String) -> Result<(), InvalidInput<&'a str, &'a str>> {
+        valid_string(username)
             .map_err(|_| InvalidInput::new("Invalid username"))
             .and(if username.is_ascii() {
                 Ok(())
@@ -387,10 +409,35 @@ pub mod validator {
             })
     }
 
-    pub fn valid_user_input<'a>(user: UserInput) -> Result<(), InvalidInput<&'a str, &'a str>> {
-        valid_username(user.username)
+    pub fn valid_user_input<'a>(user: &UserInput) -> Result<(), InvalidInput<&'a str, &'a str>> {
+        valid_username(&user.username)
             .map_err(|e| e.with_field_name("username"))
-            .and(valid_password(user.password).map_err(|e| e.with_field_name("password")))
-            .and(valid_email(user.email_address).map_err(|e| e.with_field_name("email_address")))
+            .and(valid_password(&user.password).map_err(|e| e.with_field_name("password")))
+            .and(valid_email(&user.email_address).map_err(|e| e.with_field_name("email_address")))
+    }
+}
+
+pub mod organization {
+    use uuid::Uuid;
+
+    use isok_data::owner::{
+        NormalOrganization, Organization, OrganizationType, OrganizationUserRole,
+    };
+
+    pub fn is_owner(user_id: &Uuid, organization: &Organization) -> bool {
+        if let OrganizationType::NormalOrganization(NormalOrganization { users, .. }) =
+            &organization.organization_type
+        {
+            if users
+                .iter()
+                .filter(|u| u.user.user_id == *user_id && u.role == OrganizationUserRole::Owner)
+                .last()
+                .is_none()
+            {
+                return false;
+            }
+        }
+
+        true
     }
 }

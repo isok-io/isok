@@ -1,11 +1,13 @@
-use isok_data::check::{Check, CheckInput, CheckKind};
+use std::time::Duration;
+
 use serde_json;
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::types::chrono::Utc;
 use sqlx::PgPool;
-use std::time::Duration;
 use uuid::Uuid;
+
+use isok_data::check::{Check, CheckInput, CheckKind};
 
 use crate::api::errors::RequestError;
 
@@ -131,14 +133,16 @@ impl DbHandler {
         &self,
         check_id: Uuid,
         check_kind: CheckKind,
+        organization_id: Uuid,
     ) -> Result<(), RequestError> {
         sqlx::query!(
             r#"
-UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
+UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL AND owner_id = $4
         "#,
             serde_json::to_value(check_kind).unwrap(),
             Utc::now(),
-            check_id
+            check_id,
+            organization_id
         )
         .execute(&self.pool)
         .await
@@ -150,14 +154,16 @@ UPDATE checks SET kind = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at 
         &self,
         check_id: Uuid,
         interval: Duration,
+        organization_id: Uuid,
     ) -> Result<(), RequestError> {
         sqlx::query!(
             r#"
-UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
+UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL AND owner_id = $4
         "#,
             duration_to_pg_interval(interval),
             Utc::now(),
-            check_id
+            check_id,
+            organization_id
         )
         .execute(&self.pool)
         .await
@@ -169,14 +175,16 @@ UPDATE checks SET interval = $1, updated_at = $2 WHERE check_id = $3 AND deleted
         &self,
         check_id: Uuid,
         max_latency: Duration,
+        organization_id: Uuid,
     ) -> Result<(), RequestError> {
         sqlx::query!(
             r#"
-UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL
+UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND deleted_at IS NULL AND owner_id = $4
         "#,
             duration_to_pg_interval(max_latency),
             Utc::now(),
-            check_id
+            check_id,
+            organization_id
         )
         .execute(&self.pool)
         .await
@@ -184,14 +192,19 @@ UPDATE checks SET max_latency = $1, updated_at = $2 WHERE check_id = $3 AND dele
         .map_err(|e| map_row_not_found(e, "check", check_id))
     }
 
-    pub async fn delete_check(&self, check_id: Uuid) -> Result<Check, RequestError> {
+    pub async fn delete_check(
+        &self,
+        check_id: Uuid,
+        organization_id: Uuid,
+    ) -> Result<Check, RequestError> {
         sqlx::query!(
             r#"
-            UPDATE checks SET deleted_at = $1 WHERE check_id = $2 AND deleted_at IS NULL
+            UPDATE checks SET deleted_at = $1 WHERE check_id = $2 AND deleted_at IS NULL AND owner_id = $3
             RETURNING check_id,owner_id, kind, max_latency, interval, region, created_at, updated_at, deleted_at
         "#,
             Utc::now(),
-            check_id
+            check_id,
+            organization_id
         )
         .map(|row| Check {
             check_id: row.check_id,

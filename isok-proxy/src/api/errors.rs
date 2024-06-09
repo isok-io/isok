@@ -8,6 +8,7 @@ pub use http::StatusCode;
 use http::Uri;
 pub use log::error;
 
+#[derive(Debug)]
 pub struct DbQueryError(pub sqlx::Error);
 
 impl IntoResponse for DbQueryError {
@@ -185,14 +186,14 @@ impl IntoResponse for RegionNotFound {
 #[derive(Clone)]
 pub enum ReqwestErrors {
     Err(String),
-    None
+    None,
 }
 
 impl Display for ReqwestErrors {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ReqwestErrors::Err(e) => write!(f, "{e}"),
-            ReqwestErrors::None => write!(f, "")
+            ReqwestErrors::None => write!(f, ""),
         }
     }
 }
@@ -204,13 +205,13 @@ impl ReqwestError {
     pub fn none(uri: Uri) -> Self {
         Self(uri, ReqwestErrors::None)
     }
-    
+
     pub fn error(uri: Uri, e: reqwest::Error) -> Self {
         Self(uri, ReqwestErrors::Err(e.to_string()))
     }
 }
 
-impl IntoResponse for ReqwestError{
+impl IntoResponse for ReqwestError {
     fn into_response(self) -> Response {
         error!(target: "REQWEST", "Error contacting api: {}: {}", self.0, self.1);
 
