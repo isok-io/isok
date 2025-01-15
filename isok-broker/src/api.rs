@@ -1,10 +1,10 @@
-use crate::message_broker::{MessageBroker, MessageBrokerSender};
+use crate::transport::{ResultTransport, TransportLayer};
 use isok_data::broker_rpc::broker_server::{Broker, BrokerServer};
 use isok_data::broker_rpc::{CheckBatchRequest, CheckBatchResponse, HealthRequest, HealthResponse};
 use tonic::transport::Server;
 
 pub(crate) struct BrokerGrpcService {
-    message_broker: MessageBroker,
+    transport_layer: TransportLayer,
 }
 
 #[tonic::async_trait]
@@ -36,8 +36,8 @@ impl Broker for BrokerGrpcService {
         // the agent might duplicate whole batch to another broker. We should
         // treat a batch like a transaction.
         for event in request.get_ref().events.iter() {
-            self.message_broker
-                .process_message(event)
+            self.transport_layer
+                .process_result(event)
                 .await
                 .map_err(|e| tonic::Status::internal(e.to_string()))?;
         }
@@ -58,8 +58,8 @@ pub enum ApiError {
 }
 
 impl BrokerGrpcService {
-    pub fn new(message_broker: MessageBroker) -> Self {
-        Self { message_broker }
+    pub fn new(transport_layer: TransportLayer) -> Self {
+        Self { transport_layer }
     }
 
     pub async fn run_on(self, addr: std::net::SocketAddr) -> Result<(), ApiError> {

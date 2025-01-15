@@ -77,7 +77,7 @@ mod tests {
             endpoint: "toto".to_string(),
             secured: false,
         };
-        let mut job_result = JobResult::new(JobId::generate());
+        let mut job_result = JobResult::new(JobId::generate(), "toto".to_string());
         tcp.execute(&mut job_result)
             .await
             .expect("Expected execution to succeed");
@@ -100,7 +100,7 @@ mod tests {
             endpoint: "127.0.0.1".to_string() + ":" + &port.to_string(),
             secured: false,
         };
-        let mut job_result = JobResult::new(JobId::generate());
+        let mut job_result = JobResult::new(JobId::generate(), "toto".to_string());
         tcp.execute(&mut job_result)
             .await
             .expect("Expected execution to succeed");
@@ -113,7 +113,7 @@ mod tests {
             endpoint: "127.0.0.1:65534".to_string(),
             secured: false,
         };
-        let mut job_result = JobResult::new(JobId::generate());
+        let mut job_result = JobResult::new(JobId::generate(), "toto".to_string());
         tcp.execute(&mut job_result)
             .await
             .expect("Expected execution to succeed");

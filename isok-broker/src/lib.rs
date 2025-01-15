@@ -1,14 +1,14 @@
 mod api;
 pub mod config;
-mod message_broker;
+mod transport;
 
 use crate::config::{Config, Error};
-use crate::message_broker::{KafkaMessageBroker, MessageBroker};
+use crate::transport::TransportLayer;
 
 pub async fn run(config: Config) -> Result<(), Error> {
-    let message_broker = KafkaMessageBroker::try_new(config.kafka)?;
+    let transport = TransportLayer::try_new(config.transport)?;
 
-    api::BrokerGrpcService::new(MessageBroker::Kafka(message_broker))
+    api::BrokerGrpcService::new(transport)
         .run_on(config.api.listen_address)
         .await
         .map_err(Error::UnableToStartApiServer)?;

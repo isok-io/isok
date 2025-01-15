@@ -1,6 +1,7 @@
 use crate::batch_sender::JobResult;
 use crate::jobs::{Execute, JobError};
 use async_trait::async_trait;
+use isok_data::broker_rpc::check_result::Details;
 use isok_data::broker_rpc::{CheckJobStatus, JobDetailsHttp};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::StatusCode;
@@ -8,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
-use isok_data::broker_rpc::check_result::Details;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct HttpJob {

@@ -15,7 +15,7 @@ use tonic::transport::Channel;
 #[derive(Debug)]
 pub struct JobResult {
     pub id: JobId,
-    pub name: String,
+    pub name: Box<str>,
     pub run_at: Instant,
     pub status: CheckJobStatus,
     pub latency: Option<Duration>,
@@ -26,7 +26,7 @@ impl JobResult {
     pub fn new(id: JobId, name: String) -> Self {
         JobResult {
             id,
-            name,
+            name: name.into_boxed_str(),
             run_at: Instant::now(),
             status: CheckJobStatus::Unknown,
             details: None,
@@ -42,8 +42,8 @@ impl JobResult {
         self.latency = Some(latency);
     }
 
-    pub(crate) fn set_details(&mut self, details: Option<Details>) {
-        self.details = details;
+    pub(crate) fn set_details(&mut self, details: impl Into<Option<Details>>) {
+        self.details = details.into();
     }
 }
 
@@ -140,7 +140,7 @@ impl BatchSenderOutput for SocketBatchSender {
                 }),
                 tags: None,
                 details: job_result.details,
-                pretty_name: Some(job_result.name),
+                pretty_name: Some(job_result.name.to_string()),
             }],
         };
         let mut buffer = Vec::new();
@@ -289,7 +289,7 @@ impl From<JobResult> for CheckResult {
             }),
             tags: None,
             details: value.details,
-            pretty_name: Some(value.name),
+            pretty_name: Some(value.name.to_string()),
         }
     }
 }
