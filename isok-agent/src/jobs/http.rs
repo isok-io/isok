@@ -1,13 +1,14 @@
 use crate::batch_sender::JobResult;
 use crate::jobs::{Execute, JobError};
 use async_trait::async_trait;
-use isok_data::broker_rpc::CheckJobStatus;
+use isok_data::broker_rpc::{CheckJobStatus, JobDetailsHttp};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
+use isok_data::broker_rpc::check_result::Details;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct HttpJob {
@@ -53,6 +54,9 @@ impl Execute for HttpJob {
                 let _ = response.status();
                 msg.set_status(CheckJobStatus::Reachable);
                 msg.set_latency(latency);
+                msg.set_details(Some(Details::DetailsHttp(JobDetailsHttp {
+                    status_code: response.status().as_u16() as u32,
+                })));
             }
             Err(_) => {
                 msg.set_status(CheckJobStatus::Unreachable);
