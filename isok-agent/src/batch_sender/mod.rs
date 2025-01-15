@@ -15,6 +15,7 @@ use tonic::transport::Channel;
 #[derive(Debug)]
 pub struct JobResult {
     pub id: JobId,
+    pub name: String,
     pub run_at: Instant,
     pub status: CheckJobStatus,
     pub latency: Option<Duration>,
@@ -22,9 +23,10 @@ pub struct JobResult {
 }
 
 impl JobResult {
-    pub fn new(id: JobId) -> Self {
+    pub fn new(id: JobId, name: String) -> Self {
         JobResult {
             id,
+            name,
             run_at: Instant::now(),
             status: CheckJobStatus::Unknown,
             details: None,
@@ -38,6 +40,10 @@ impl JobResult {
 
     pub(crate) fn set_latency(&mut self, latency: Duration) {
         self.latency = Some(latency);
+    }
+
+    pub(crate) fn set_details(&mut self, details: Option<Details>) {
+        self.details = details;
     }
 }
 
@@ -134,6 +140,7 @@ impl BatchSenderOutput for SocketBatchSender {
                 }),
                 tags: None,
                 details: job_result.details,
+                pretty_name: Some(job_result.name),
             }],
         };
         let mut buffer = Vec::new();
@@ -282,6 +289,7 @@ impl From<JobResult> for CheckResult {
             }),
             tags: None,
             details: value.details,
+            pretty_name: Some(value.name),
         }
     }
 }
@@ -420,7 +428,7 @@ mod tests {
             .await
             .expect("Expected to create batch sender");
 
-        let job_result = JobResult::new(JobId::generate());
+        let job_result = JobResult::new(JobId::generate(), "test".to_string());
         let snapshot_last_batch = sender.last_batch.clone();
         sender.send(job_result).await.unwrap();
         assert_eq!(sender.backlog.len(), 1);
@@ -445,7 +453,7 @@ mod tests {
             .await
             .expect("Expected to create batch sender");
 
-        let job_result = JobResult::new(JobId::generate());
+        let job_result = JobResult::new(JobId::generate(), "test".to_string());
         let snapshot_last_batch = sender.last_batch.clone();
         sender.send(job_result).await.unwrap();
         assert_eq!(sender.backlog.len(), 0);
@@ -465,7 +473,7 @@ mod tests {
             .await
             .expect("Expected to create batch sender");
 
-        let job_result = JobResult::new(JobId::generate());
+        let job_result = JobResult::new(JobId::generate(), "test".to_string());
         let snapshot_last_batch = sender.last_batch.clone();
         sender.send(job_result).await.unwrap();
         assert_eq!(sender.backlog.len(), 0);

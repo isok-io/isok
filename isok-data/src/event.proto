@@ -31,6 +31,8 @@ message CheckResult {
     JobDetailsTcp detail_tcp = 10;
     JobDetailsHttp details_http = 11;
   }
+
+  optional string pretty_name = 12;
 }
 
 enum CheckJobStatus {

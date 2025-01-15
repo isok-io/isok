@@ -69,7 +69,7 @@ impl Job {
 
     #[tracing::instrument(skip_all, fields(self.id, self.pretty_name))]
     pub(crate) async fn execute(&self, tx: UnboundedSender<JobResult>) -> Result<(), JobError> {
-        let mut job_result = JobResult::new(self.id());
+        let mut job_result = JobResult::new(self.id(), self.pretty_name());
         match &self.inner {
             JobInnerConfig::Tcp(job) => job.execute(&mut job_result).await,
             JobInnerConfig::Http(job) => job.execute(&mut job_result).await,
