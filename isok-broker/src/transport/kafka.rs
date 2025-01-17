@@ -1,64 +1,42 @@
-use crate::config::KafkaConfig;
+use std::time::Duration;
+
 use isok_data::broker_rpc::CheckResult;
 use prost::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::ClientConfig;
-use std::time::Duration;
 
-#[derive(Debug, thiserror::Error)]
-pub enum MessageBrokerError {
-    #[error("Unable to create producer: {0}")]
-    UnableToCreateProducer(#[from] rdkafka::error::KafkaError),
-    #[error("The message broker isn't able to process any message")]
-    ServiceUnhealthy,
-    #[error("A batch or single check result couldn't be stored persistently: {0}")]
-    UnableToStoreCheckResult(String),
-}
+use crate::config::KafkaConfig;
+use crate::transport::{ResultTransport, TransportError};
 
-#[enum_dispatch::enum_dispatch(MessageBrokerSender)]
-pub enum MessageBroker {
-    Kafka(KafkaMessageBroker),
-}
+static RECORD_PRODUCE_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub struct KafkaMessageBroker {
     producer: FutureProducer,
     topic: String,
 }
 
-#[enum_dispatch::enum_dispatch]
-pub trait MessageBrokerSender {
-    async fn process_batch(&self, batch: &[CheckResult]) -> Result<(), MessageBrokerError> {
-        for message in batch {
-            self.process_message(message).await?;
-        }
-        Ok(())
-    }
-    async fn process_message(&self, message: &CheckResult) -> Result<(), MessageBrokerError>;
-    async fn health_check(&self) -> Result<(), MessageBrokerError>;
-}
-
-impl MessageBrokerSender for KafkaMessageBroker {
-    async fn process_message(&self, message: &CheckResult) -> Result<(), MessageBrokerError> {
+impl ResultTransport for KafkaMessageBroker {
+    async fn process_result(&self, result: &CheckResult) -> Result<(), TransportError> {
         let mut buffer = Vec::new();
-        message.encode(&mut buffer).unwrap();
+        result.encode(&mut buffer).unwrap();
         let record = FutureRecord::to(&self.topic)
             .payload(&buffer)
-            .key(&message.id_ulid);
+            .key(&result.id_ulid);
 
         self.producer
-            .send(record, Duration::from_secs(2))
+            .send(record, RECORD_PRODUCE_TIMEOUT)
             .await
-            .map_err(|e| MessageBrokerError::UnableToStoreCheckResult(format!("{:?}", e)))?;
+            .map_err(|e| TransportError::BatchFatalError(format!("{:?}", e)))?;
         Ok(())
     }
 
-    async fn health_check(&self) -> Result<(), MessageBrokerError> {
+    async fn health_check(&self) -> Result<(), TransportError> {
         Ok(())
     }
 }
 
 impl KafkaMessageBroker {
-    pub fn try_new(config: KafkaConfig) -> Result<Self, MessageBrokerError> {
+    pub fn try_new(config: KafkaConfig) -> Result<Self, TransportError> {
         let topic = config.topic.clone();
         let producer = FutureProducer::try_from(config)?;
         Ok(KafkaMessageBroker { producer, topic })
@@ -66,12 +44,12 @@ impl KafkaMessageBroker {
 }
 
 impl TryFrom<KafkaConfig> for FutureProducer {
-    type Error = MessageBrokerError;
+    type Error = TransportError;
 
     fn try_from(value: KafkaConfig) -> Result<Self, Self::Error> {
         ClientConfig::from_iter(value.properties)
             .create()
-            .map_err(|e| MessageBrokerError::UnableToCreateProducer(e))
+            .map_err(|e| TransportError::UnableToCreateProducer(e))
     }
 }
 
@@ -107,6 +85,7 @@ mod tests {
             KafkaMessageBroker::try_new(config).expect("Failed to create Kafka message broker");
         let batch = vec![CheckResult {
             id_ulid: "test".to_string(),
+            pretty_name: None,
             run_at: None,
             status: CheckJobStatus::Reachable.into(),
             metrics: Default::default(),

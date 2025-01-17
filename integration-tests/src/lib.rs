@@ -1,6 +1,8 @@
 use isok_agent::config::{Config as AgentConfig, ConfigCheckAdapter, ResultSenderAdapter};
 use isok_agent::jobs::Job;
-use isok_broker::config::{ApiConfig, Config as BrokerConfig, Error as BrokerError, KafkaConfig};
+use isok_broker::config::{
+    ApiConfig, Config as BrokerConfig, Error as BrokerError, KafkaConfig, Transport,
+};
 use isok_broker::run;
 use once_cell::sync::Lazy;
 use prost::Message;
@@ -55,7 +57,7 @@ impl BrokerTestingRunner<'static, DefaultProducerContext> {
         };
         let port = NEXT_PORT.fetch_add(1, std::sync::atomic::Ordering::SeqCst) as u16;
         let config = BrokerConfig {
-            kafka: kafka_config,
+            transport: Transport::Kafka(kafka_config),
             api: ApiConfig {
                 listen_address: SocketAddr::new(Ipv4Addr::LOCALHOST.into(), port.clone()),
             },
@@ -86,8 +88,13 @@ impl BrokerTestingRunner<'static, DefaultProducerContext> {
             .create()
             .expect("Consumer creation failed");
 
+        let topic = match self.config.transport {
+            Transport::Kafka(ref kafka_config) => &kafka_config.topic,
+            _ => panic!("Not supported"),
+        };
+
         consumer
-            .subscribe(&[&self.config.kafka.topic.clone()])
+            .subscribe(&[topic])
             .expect("Can't subscribe to specified topics");
         consumer
     }

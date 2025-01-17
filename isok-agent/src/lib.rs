@@ -1,7 +1,8 @@
+use tokio::join;
+
 use crate::batch_sender::BatchSender;
 use crate::config::{Config, GetJobsRegistry};
 use crate::errors::{Error, Result};
-use tokio::join;
 
 mod batch_sender;
 pub mod config;

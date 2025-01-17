@@ -1,7 +1,9 @@
-use crate::jobs::Job;
 use std::ops::Deref;
 use std::time::Duration;
+
 use tokio::time::Instant;
+
+use crate::jobs::Job;
 
 // Own a job and it's last execution
 #[derive(Debug)]

@@ -1,6 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::ops::Deref;
+
+use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+
+pub mod broker_rpc;
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct JobId(Ulid);
@@ -48,9 +51,4 @@ impl Deref for JobPrettyName {
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
-}
-
-pub mod broker_rpc {
-    tonic::include_proto!("isok.broker.rpc");
-    pub type BrokerGrpcClient = broker_client::BrokerClient<tonic::transport::Channel>;
 }

@@ -1,13 +1,15 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use eyre::Context;
-use isok_agent::config::Config;
-use isok_agent::run;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
+
+use isok_agent::config::Config;
+use isok_agent::run;
 
 #[derive(thiserror::Error, Debug)]
 enum Error {

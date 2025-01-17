@@ -28,6 +28,7 @@ async fn test_kafka_message_integrity() {
                 }),
                 events: vec![CheckResult {
                     id_ulid: "test".to_string(),
+                    pretty_name: None,
                     run_at: None,
                     status: isok_data::broker_rpc::CheckJobStatus::Reachable as i32,
                     metrics: Default::default(),

@@ -1,13 +1,15 @@
-use crate::api::run_offloader_api;
+use std::collections::HashMap;
+
 use isok_agent::config::{Config as AgentConfig, ResultSenderAdapter};
 use isok_agent::jobs::JobInnerConfig;
-use isok_broker::config::Config as BrokerConfig;
-use std::collections::HashMap;
+use isok_broker::config::{Config as BrokerConfig, Transport};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::kafka::Kafka;
 use tokio::task::JoinHandle;
 use tracing::info;
+
+use crate::api::run_offloader_api;
 
 mod api;
 
@@ -23,10 +25,10 @@ async fn run_kafka_container() -> ContainerAsync<Kafka> {
 
 async fn run_broker(kafka_boostrap_servers: String) -> JoinHandle<Result<(), String>> {
     let broker_config = BrokerConfig {
-        kafka: isok_broker::config::KafkaConfig {
+        transport: Transport::Kafka(isok_broker::config::KafkaConfig {
             topic: "isok.agent.results".to_string(),
             properties: HashMap::from([("bootstrap.servers".to_string(), kafka_boostrap_servers)]),
-        },
+        }),
         api: isok_broker::config::ApiConfig {
             listen_address: std::net::SocketAddr::new(
                 std::net::Ipv4Addr::LOCALHOST.into(),

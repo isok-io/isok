@@ -1,10 +1,12 @@
-use crate::errors::{Error, Result};
-use crate::jobs::Job;
-use crate::registry::JobRegistry;
+use std::path::{Path, PathBuf};
+
 use figment::providers::{Format, Yaml};
 use figment::Figment;
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
+
+use crate::errors::{Error, Result};
+use crate::jobs::Job;
+use crate::registry::JobRegistry;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Config {

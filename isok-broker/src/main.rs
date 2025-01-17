@@ -1,12 +1,14 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use eyre::Context;
-use isok_broker::{config::Config, run};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
+
+use isok_broker::{config::Config, run};
 
 #[derive(Parser, Serialize, Deserialize, Debug)]
 #[command(version, about, long_about = None)]

@@ -1,12 +1,14 @@
-use crate::batch_sender::JobResult;
-use crate::jobs::http::HttpJob;
-use crate::jobs::tcp::TcpJob;
+use std::time::Duration;
+
 use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
 use isok_data::JobId;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
+
+use crate::batch_sender::JobResult;
+use crate::jobs::http::HttpJob;
+use crate::jobs::tcp::TcpJob;
 
 pub mod http;
 pub mod tcp;
@@ -69,7 +71,7 @@ impl Job {
 
     #[tracing::instrument(skip_all, fields(self.id, self.pretty_name))]
     pub(crate) async fn execute(&self, tx: UnboundedSender<JobResult>) -> Result<(), JobError> {
-        let mut job_result = JobResult::new(self.id());
+        let mut job_result = JobResult::new(self.id(), self.pretty_name());
         match &self.inner {
             JobInnerConfig::Tcp(job) => job.execute(&mut job_result).await,
             JobInnerConfig::Http(job) => job.execute(&mut job_result).await,

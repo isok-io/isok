@@ -1,12 +1,14 @@
-use crate::batch_sender::JobResult;
-use crate::jobs::{Execute, JobError};
-use async_trait::async_trait;
-use isok_data::broker_rpc::CheckJobStatus;
-use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Instant;
+
+use async_trait::async_trait;
+use isok_data::broker_rpc::CheckJobStatus;
+use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
+
+use crate::batch_sender::JobResult;
+use crate::jobs::{Execute, JobError};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct TcpJob {
@@ -77,7 +79,7 @@ mod tests {
             endpoint: "toto".to_string(),
             secured: false,
         };
-        let mut job_result = JobResult::new(JobId::generate());
+        let mut job_result = JobResult::new(JobId::generate(), "toto".to_string());
         tcp.execute(&mut job_result)
             .await
             .expect("Expected execution to succeed");
@@ -100,7 +102,7 @@ mod tests {
             endpoint: "127.0.0.1".to_string() + ":" + &port.to_string(),
             secured: false,
         };
-        let mut job_result = JobResult::new(JobId::generate());
+        let mut job_result = JobResult::new(JobId::generate(), "toto".to_string());
         tcp.execute(&mut job_result)
             .await
             .expect("Expected execution to succeed");
@@ -113,7 +115,7 @@ mod tests {
             endpoint: "127.0.0.1:65534".to_string(),
             secured: false,
         };
-        let mut job_result = JobResult::new(JobId::generate());
+        let mut job_result = JobResult::new(JobId::generate(), "toto".to_string());
         tcp.execute(&mut job_result)
             .await
             .expect("Expected execution to succeed");
