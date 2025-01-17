@@ -1,13 +1,15 @@
-use crate::api::run_offloader_api;
+use std::collections::HashMap;
+
 use isok_agent::config::{Config as AgentConfig, ResultSenderAdapter};
 use isok_agent::jobs::JobInnerConfig;
 use isok_broker::config::{Config as BrokerConfig, Transport};
-use std::collections::HashMap;
 use testcontainers::runners::AsyncRunner;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::kafka::Kafka;
 use tokio::task::JoinHandle;
 use tracing::info;
+
+use crate::api::run_offloader_api;
 
 mod api;
 

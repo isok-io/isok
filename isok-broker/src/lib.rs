@@ -1,9 +1,9 @@
+use crate::config::{Config, Error};
+use crate::transport::TransportLayer;
+
 mod api;
 pub mod config;
 mod transport;
-
-use crate::config::{Config, Error};
-use crate::transport::TransportLayer;
 
 pub async fn run(config: Config) -> Result<(), Error> {
     let transport = TransportLayer::try_new(config.transport)?;

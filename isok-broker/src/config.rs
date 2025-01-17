@@ -1,12 +1,14 @@
-use crate::api::ApiError;
-use crate::transport::TransportError;
+use std::collections::HashMap;
+use std::net::{Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
+
 use figment::providers::{Format, Yaml};
 use figment::Figment;
 use reqwest::Url;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::net::{Ipv4Addr, SocketAddr};
-use std::path::PathBuf;
+
+use crate::api::ApiError;
+use crate::transport::TransportError;
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
@@ -47,7 +49,7 @@ pub struct Warp10Config {
     pub batch_size: u64,
     /// Maximum interval to which we send a batch, if batch_size is not reached, in milliseconds
     #[serde(default = "default_batch_interval")]
-    pub batch_interval: u64
+    pub batch_interval: u64,
 }
 
 fn default_batch_size() -> u64 {

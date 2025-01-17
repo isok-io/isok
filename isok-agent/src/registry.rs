@@ -1,16 +1,18 @@
-use crate::batch_sender::JobResult;
-use crate::errors::Result;
-use crate::jobs::Job;
-use crate::state::JobState;
+use std::path::PathBuf;
+use std::time::Duration;
+
 use dashmap::DashMap;
 use figment::providers::{Format, Yaml};
 use figment::Figment;
 use isok_data::JobPrettyName;
 use serde::Deserialize;
-use std::path::PathBuf;
-use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::Instant;
+
+use crate::batch_sender::JobResult;
+use crate::errors::Result;
+use crate::jobs::Job;
+use crate::state::JobState;
 
 pub struct JobRegistry {
     jobs: DashMap<JobPrettyName, JobState>,

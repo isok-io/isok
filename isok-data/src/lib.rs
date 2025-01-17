@@ -1,8 +1,9 @@
-pub mod broker_rpc;
+use std::ops::Deref;
 
 use serde::{Deserialize, Serialize};
-use std::ops::Deref;
 use ulid::Ulid;
+
+pub mod broker_rpc;
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct JobId(Ulid);

@@ -1,10 +1,12 @@
-use crate::config::KafkaConfig;
-use crate::transport::{ResultTransport, TransportError};
+use std::time::Duration;
+
 use isok_data::broker_rpc::CheckResult;
 use prost::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::ClientConfig;
-use std::time::Duration;
+
+use crate::config::KafkaConfig;
+use crate::transport::{ResultTransport, TransportError};
 
 static RECORD_PRODUCE_TIMEOUT: Duration = Duration::from_secs(2);
 

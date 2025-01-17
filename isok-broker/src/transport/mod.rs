@@ -1,10 +1,11 @@
-pub(crate) mod kafka;
-pub(crate) mod warp10;
+use isok_data::broker_rpc::CheckResult;
 
 use crate::config::Transport;
 use crate::transport::kafka::KafkaMessageBroker;
 use crate::transport::warp10::Warp10MetricsTransport;
-use isok_data::broker_rpc::CheckResult;
+
+pub(crate) mod kafka;
+pub(crate) mod warp10;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransportError {

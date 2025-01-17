@@ -1,8 +1,10 @@
-use crate::config::Warp10Config;
-use crate::transport::{ResultTransport, TransportError};
+use std::collections::HashMap;
+
 use isok_data::broker_rpc::CheckResult;
 use reqwest::Url;
-use std::collections::HashMap;
+
+use crate::config::Warp10Config;
+use crate::transport::{ResultTransport, TransportError};
 
 static WARP10_TOKEN_HEADER: &str = "X-Warp10-Token";
 static WARP10_UPDATE_ENDPOINT: &str = "/api/v0/update";

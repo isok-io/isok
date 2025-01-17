@@ -1,7 +1,8 @@
-use crate::transport::{ResultTransport, TransportLayer};
 use isok_data::broker_rpc::broker_server::{Broker, BrokerServer};
 use isok_data::broker_rpc::{CheckBatchRequest, CheckBatchResponse, HealthRequest, HealthResponse};
 use tonic::transport::Server;
+
+use crate::transport::{ResultTransport, TransportLayer};
 
 pub(crate) struct BrokerGrpcService {
     transport_layer: TransportLayer,

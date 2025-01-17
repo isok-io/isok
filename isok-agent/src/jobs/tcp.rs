@@ -1,12 +1,14 @@
-use crate::batch_sender::JobResult;
-use crate::jobs::{Execute, JobError};
-use async_trait::async_trait;
-use isok_data::broker_rpc::CheckJobStatus;
-use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Instant;
+
+use async_trait::async_trait;
+use isok_data::broker_rpc::CheckJobStatus;
+use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
+
+use crate::batch_sender::JobResult;
+use crate::jobs::{Execute, JobError};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct TcpJob {

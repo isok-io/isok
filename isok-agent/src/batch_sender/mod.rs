@@ -1,16 +1,18 @@
-use crate::config::{BrokerConfig, ResultSenderAdapter, SocketConfig};
+use std::time::Duration;
+
 use enum_dispatch::enum_dispatch;
 use isok_data::broker_rpc::broker_client::BrokerClient;
 use isok_data::broker_rpc::check_result::Details;
 use isok_data::broker_rpc::{BrokerGrpcClient, CheckJobMetrics, CheckJobStatus, CheckResult, Tags};
 use isok_data::JobId;
 use prost::Message;
-use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixStream;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::time::Instant;
 use tonic::transport::Channel;
+
+use crate::config::{BrokerConfig, ResultSenderAdapter, SocketConfig};
 
 #[derive(Debug)]
 pub struct JobResult {
