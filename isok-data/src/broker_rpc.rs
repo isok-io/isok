@@ -112,6 +112,7 @@ impl CheckResult {
         if let Some(tags) = &self.tags {
             labels.push(warp10::Label::new("zone", &tags.zone));
             labels.push(warp10::Label::new("region", &tags.region));
+            labels.push(warp10::Label::new("agent_id", &tags.agent_id));
             return labels;
         }
 
@@ -208,7 +209,7 @@ mod tests {
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
-        assert_eq!(metrics, "1735689600000000// isok%2Echeck%2E%2Estatus{zone=dev,region=localhost,id=01ARZ3NDEKTSV4RRWETS2PGZ5M,pretty%5Fname=test} 1");
+        assert_eq!(metrics, "1735689600000000// isok%2Echeck%2E%2Estatus{zone=dev,region=localhost,agent%5Fid=test,id=01ARZ3NDEKTSV4RRWETS2PGZ5M,pretty%5Fname=test} 1");
     }
 
     #[test]
