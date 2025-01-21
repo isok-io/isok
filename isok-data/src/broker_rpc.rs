@@ -9,7 +9,7 @@ use crate::broker_rpc::check_result::Details;
 
 tonic::include_proto!("isok.broker.rpc");
 
-const GTS_DEFAULT_PREFIX: &str = "isok.check.";
+const GTS_DEFAULT_PREFIX: &str = "isok.check";
 const GTS_PREFIX: OnceCell<String> = OnceCell::new();
 
 /// See [CheckJobStatus] for values

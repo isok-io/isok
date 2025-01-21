@@ -16,6 +16,32 @@ use crate::jobs::{Execute, JobError};
 pub struct HttpJob {
     endpoint: String,
     headers: HashMap<String, String>,
+    #[serde(
+        deserialize_with = "deserialize_reqwest_method",
+        serialize_with = "serialize_reqwest_method",
+        default = "default_method"
+    )]
+    method: reqwest::Method,
+}
+
+fn default_method() -> reqwest::Method {
+    reqwest::Method::GET
+}
+
+fn deserialize_reqwest_method<'de, D>(deserializer: D) -> Result<reqwest::Method, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+
+    reqwest::Method::from_str(&buf).map_err(serde::de::Error::custom)
+}
+
+fn serialize_reqwest_method<S>(method: &reqwest::Method, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(method.as_str())
 }
 
 pub struct HttpJobResult {
@@ -27,6 +53,7 @@ impl HttpJob {
         Self {
             endpoint,
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+            method: default_method(),
         }
     }
 }
@@ -50,7 +77,7 @@ impl Execute for HttpJob {
             .build()?;
 
         let start_time = Instant::now();
-        match client.get(&self.endpoint).send().await {
+        match client.request(self.method.clone(), &self.endpoint).send().await {
             Ok(response) => {
                 let latency = start_time.elapsed();
                 let _ = response.status();
