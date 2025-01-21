@@ -68,7 +68,7 @@ pub struct SocketConfig {
 pub struct BrokerConfig {
     pub main_broker: String,
     pub fallback_brokers: Vec<String>,
-    pub agent_id: String,
+    pub agent_id: Option<String>,
     pub zone: String,
     pub region: String,
     pub batch: u64,
@@ -124,6 +124,6 @@ mod tests {
         let _ = Config::from_config_file(
             env!("CARGO_MANIFEST_DIR").to_string() + "/assets/config/agent.example.yaml",
         )
-        .expect("Unable to load default config");
+            .expect("Unable to load default config");
     }
 }

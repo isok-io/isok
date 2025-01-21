@@ -6,6 +6,8 @@ use isok_data::broker_rpc::check_result::Details;
 use isok_data::broker_rpc::{BrokerGrpcClient, CheckJobMetrics, CheckJobStatus, CheckResult, Tags};
 use isok_data::JobId;
 use prost::Message;
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixStream;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -219,6 +221,15 @@ impl BrokerBatchSender {
         Self::new_with_client(config, client).await
     }
 
+    fn generate_agent_id(region: &str, zone: &str) -> String {
+        let id: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(4)
+            .map(char::from)
+            .collect();
+        format!("{}-{}-{}", region, zone, id)
+    }
+
     pub async fn new_with_client(
         config: BrokerConfig,
         client: BrokerClient<Channel>,
@@ -232,7 +243,7 @@ impl BrokerBatchSender {
         Ok(BrokerBatchSender {
             client,
             backlog: Vec::with_capacity(batch as usize),
-            agent_id: config.agent_id,
+            agent_id: Self::generate_agent_id(&config.region, &config.zone),
             zone: config.zone,
             region: config.region,
             batch: batch as u64,
@@ -411,7 +422,7 @@ mod tests {
         BrokerConfig {
             main_broker: "127.0.0.1:50551".to_string(),
             fallback_brokers: vec![],
-            agent_id: "test".to_string(),
+            agent_id: Some("test".to_string()),
             zone: "dev".to_string(),
             region: "localhost".to_string(),
             batch,

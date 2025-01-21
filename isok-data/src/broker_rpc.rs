@@ -189,7 +189,7 @@ mod tests {
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
-        assert_eq!(metrics, "1735689600000000// isok%2Echeck%2E%2Estatus{id=01ARZ3NDEKTSV4RRWETS2PGZ5M,pretty%5Fname=test} 1");
+        assert_eq!(metrics, "1735689600000000// isok%2Echeck%2Estatus{id=01ARZ3NDEKTSV4RRWETS2PGZ5M,pretty%5Fname=test} 1");
     }
 
     #[test]
@@ -209,7 +209,7 @@ mod tests {
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
-        assert_eq!(metrics, "1735689600000000// isok%2Echeck%2E%2Estatus{zone=dev,region=localhost,agent%5Fid=test,id=01ARZ3NDEKTSV4RRWETS2PGZ5M,pretty%5Fname=test} 1");
+        assert_eq!(metrics, "1735689600000000// isok%2Echeck%2Estatus{zone=dev,region=localhost,agent%5Fid=test,id=01ARZ3NDEKTSV4RRWETS2PGZ5M,pretty%5Fname=test} 1");
     }
 
     #[test]
@@ -230,11 +230,11 @@ mod tests {
         assert_eq!(metrics.len(), 2);
         assert_eq!(
             metrics[0],
-            "1735689600000000// isok%2Echeck%2E%2Estatus{id=some%5Fid,pretty%5Fname=test} 1"
+            "1735689600000000// isok%2Echeck%2Estatus{id=some%5Fid,pretty%5Fname=test} 1"
         );
         assert_eq!(
             metrics[1],
-            "1735689600000000// isok%2Echeck%2E%2Ehttp%2Estatus%5Fcode{id=some%5Fid,pretty%5Fname=test} 200"
+            "1735689600000000// isok%2Echeck%2Ehttp%2Estatus%5Fcode{id=some%5Fid,pretty%5Fname=test} 200"
         );
     }
 
