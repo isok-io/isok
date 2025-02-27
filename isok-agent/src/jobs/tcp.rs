@@ -2,7 +2,6 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Instant;
 
-use async_trait::async_trait;
 use isok_data::broker_rpc::CheckJobStatus;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
@@ -25,7 +24,6 @@ impl TcpJob {
     }
 }
 
-#[async_trait]
 impl Execute for TcpJob {
     async fn execute(&self, msg: &mut JobResult) -> Result<(), JobError> {
         let addr = SocketAddr::from_str(&self.endpoint);

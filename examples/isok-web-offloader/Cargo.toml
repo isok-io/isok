@@ -8,7 +8,14 @@ edition = "2021"
 isok-data = { path = "../../isok-data" }
 isok-broker = { path = "../../isok-broker" }
 isok-agent = { path = "../../isok-agent" }
-tokio = { version = "1.42.0", features = ["rt-multi-thread", "macros", "sync", "time", "rt", "signal"] }
+tokio = { version = "1.42.0", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "time",
+    "rt",
+    "signal",
+] }
 serde = { version = "1.0.216", features = ["derive"] }
 prost = { version = "0.13.4" }
 rdkafka = { version = "0.37", features = ["cmake-build"] }

@@ -100,7 +100,7 @@ impl Warp10MetricsTransport {
                 }
             });
         let metrics_count = metrics.lines().count();
-        tracing::Span::current().record("metrics_count", &metrics_count);
+        tracing::Span::current().record("metrics_count", metrics_count);
 
         match self.post_metrics(metrics).await {
             Ok(response) => self.handle_response_status(response),

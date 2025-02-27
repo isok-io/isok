@@ -5,7 +5,7 @@ use ulid::Ulid;
 
 pub mod broker_rpc;
 
-#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
 pub struct JobId(Ulid);
 
 impl JobId {

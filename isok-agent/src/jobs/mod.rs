@@ -1,16 +1,18 @@
-use std::time::Duration;
+use std::{future::Future, time::Duration};
 
-use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
+use https::HttpsJob;
 use isok_data::JobId;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::batch_sender::JobResult;
-use crate::jobs::http::HttpJob;
-use crate::jobs::tcp::TcpJob;
+use crate::{
+    batch_sender::JobResult,
+    jobs::{http::HttpJob, tcp::TcpJob},
+};
 
 pub mod http;
+pub mod https;
 pub mod tcp;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -21,6 +23,18 @@ pub enum JobInnerConfig {
     Tcp(TcpJob),
     #[serde(rename = "http")]
     Http(HttpJob),
+    #[serde(rename = "https")]
+    Https(HttpsJob),
+}
+
+impl Execute for JobInnerConfig {
+    async fn execute(&self, job_result: &mut JobResult) -> Result<(), JobError> {
+        match self {
+            Self::Tcp(job) => job.execute(job_result).await,
+            Self::Http(job) => job.execute(job_result).await,
+            Self::Https(job) => job.execute(job_result).await,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -34,10 +48,9 @@ pub struct Job {
     pretty_name: String,
 }
 
-fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
+fn deserialize_duration<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Duration, D::Error> {
     let s = u64::deserialize(deserializer)?;
     Ok(Duration::from_secs(s))
 }
@@ -72,13 +85,9 @@ impl Job {
     #[tracing::instrument(skip_all, fields(self.id, self.pretty_name))]
     pub(crate) async fn execute(&self, tx: UnboundedSender<JobResult>) -> Result<(), JobError> {
         let mut job_result = JobResult::new(self.id(), self.pretty_name());
-        match &self.inner {
-            JobInnerConfig::Tcp(job) => job.execute(&mut job_result).await,
-            JobInnerConfig::Http(job) => job.execute(&mut job_result).await,
-        }?;
-
+        self.inner.execute(&mut job_result).await?;
         if let Err(e) = tx.send(job_result) {
-            tracing::error!("Job failed to properly send its result to channel {}", e);
+            tracing::error!("Job failed to properly send its result to channel {e}");
         }
         Ok(())
     }
@@ -90,22 +99,27 @@ pub enum JobError {
     InvalidJobConfig(String),
     #[error("Unable to execute job {0}")]
     HttpError(#[from] reqwest::Error),
+    #[error("DNS config error: {0}")]
+    DnsConfigError(#[from] https::DnsResolverError),
+    #[error("Root certificates error: {0}")]
+    RootCertsError(#[from] https::RootCertsError),
 }
 
-#[async_trait]
-#[enum_dispatch]
 pub trait Execute {
-    async fn execute(&self, job_result: &mut JobResult) -> Result<(), JobError>;
+    fn execute(
+        &self,
+        job_result: &mut JobResult,
+    ) -> impl Future<Output = Result<(), JobError>> + Send;
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::jobs::{Job, JobInnerConfig};
     use std::time::Duration;
 
-    use crate::jobs::http::HttpJob;
     use isok_data::JobId;
     use serde::{Deserialize, Serialize};
+
+    use crate::jobs::{http::HttpJob, Job, JobInnerConfig};
 
     #[test]
     fn test_see_output_of_job() {

@@ -12,4 +12,6 @@ pub enum Error {
     InvalidConfigPath,
     #[error("Unable to create batch sender")]
     UnableToCreateBatchSender(#[from] BatchSenderError),
+    #[error("Unable to install default crypto provider")]
+    UnableToInstallDefaultCryptoProvider,
 }

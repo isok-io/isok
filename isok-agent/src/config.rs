@@ -124,6 +124,6 @@ mod tests {
         let _ = Config::from_config_file(
             env!("CARGO_MANIFEST_DIR").to_string() + "/assets/config/agent.example.yaml",
         )
-            .expect("Unable to load default config");
+        .expect("Unable to load default config");
     }
 }

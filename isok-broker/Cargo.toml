@@ -7,7 +7,13 @@ edition = "2021"
 isok-data = { path = "../isok-data" }
 async-trait = "0.1.83"
 reqwest = { version = "0.12.9", features = ["json"] }
-tokio = { version = "1.42.0", features = ["rt-multi-thread", "macros", "sync", "time", "rt"] }
+tokio = { version = "1.42.0", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "time",
+    "rt",
+] }
 serde = { version = "1.0.216", features = ["derive"] }
 figment = { version = "0.10.19", features = ["yaml"] }
 serde_yaml = "0.9.33"

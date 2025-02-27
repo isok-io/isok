@@ -55,7 +55,7 @@ async fn run_agent(broker_endpoint: String) -> JoinHandle<Result<(), String>> {
         result_sender_adapter: ResultSenderAdapter::Broker(isok_agent::config::BrokerConfig {
             main_broker: broker_endpoint,
             fallback_brokers: vec![],
-            agent_id: "isok-agent".to_string(),
+            agent_id: Some("isok-agent".to_string()),
             zone: "dev".to_string(),
             region: "localhost".to_string(),
             batch: 100,
