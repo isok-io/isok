@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
 
-use async_trait::async_trait;
 use isok_data::broker_rpc::check_result::Details;
 use isok_data::broker_rpc::{CheckJobStatus, JobDetailsHttp};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -33,7 +32,6 @@ where
     D: serde::Deserializer<'de>,
 {
     let buf = String::deserialize(deserializer)?;
-
     reqwest::Method::from_str(&buf).map_err(serde::de::Error::custom)
 }
 
@@ -58,7 +56,6 @@ impl HttpJob {
     }
 }
 
-#[async_trait]
 impl Execute for HttpJob {
     async fn execute(&self, msg: &mut JobResult) -> Result<(), JobError> {
         let mut headers_map = HeaderMap::new();
@@ -77,7 +74,11 @@ impl Execute for HttpJob {
             .build()?;
 
         let start_time = Instant::now();
-        match client.request(self.method.clone(), &self.endpoint).send().await {
+        match client
+            .request(self.method.clone(), &self.endpoint)
+            .send()
+            .await
+        {
             Ok(response) => {
                 let latency = start_time.elapsed();
                 let _ = response.status();

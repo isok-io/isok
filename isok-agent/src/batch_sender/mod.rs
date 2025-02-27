@@ -1,3 +1,4 @@
+use std::fmt;
 use std::time::Duration;
 
 use enum_dispatch::enum_dispatch;
@@ -6,7 +7,7 @@ use isok_data::broker_rpc::check_result::Details;
 use isok_data::broker_rpc::{BrokerGrpcClient, CheckJobMetrics, CheckJobStatus, CheckResult, Tags};
 use isok_data::JobId;
 use prost::Message;
-use rand::distributions::Alphanumeric;
+use rand::distr::Alphanumeric;
 use rand::Rng;
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixStream;
@@ -22,6 +23,7 @@ pub struct JobResult {
     pub name: Box<str>,
     pub run_at: Instant,
     pub status: CheckJobStatus,
+    pub error: Option<String>,
     pub latency: Option<Duration>,
     pub details: Option<Details>,
 }
@@ -32,6 +34,7 @@ impl JobResult {
             id,
             name: name.into_boxed_str(),
             run_at: Instant::now(),
+            error: None,
             status: CheckJobStatus::Unknown,
             details: None,
             latency: None,
@@ -48,6 +51,10 @@ impl JobResult {
 
     pub(crate) fn set_details(&mut self, details: impl Into<Option<Details>>) {
         self.details = details.into();
+    }
+
+    pub(crate) fn set_error<T: fmt::Display>(&mut self, error: impl Into<Option<T>>) {
+        self.error = error.into().as_ref().map(ToString::to_string);
     }
 }
 
@@ -144,6 +151,7 @@ impl BatchSenderOutput for SocketBatchSender {
                 }),
                 tags: None,
                 details: job_result.details,
+                error: None,
                 pretty_name: Some(job_result.name.to_string()),
             }],
         };
@@ -222,7 +230,7 @@ impl BrokerBatchSender {
     }
 
     fn generate_agent_id(region: &str, zone: &str) -> String {
-        let id: String = rand::thread_rng()
+        let id: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(4)
             .map(char::from)
@@ -246,7 +254,7 @@ impl BrokerBatchSender {
             agent_id: Self::generate_agent_id(&config.region, &config.zone),
             zone: config.zone,
             region: config.region,
-            batch: batch as u64,
+            batch,
             batch_interval: config.batch_interval,
             last_batch: Instant::now(),
         })
@@ -302,6 +310,7 @@ impl From<JobResult> for CheckResult {
             }),
             tags: None,
             details: value.details,
+            error: None,
             pretty_name: Some(value.name.to_string()),
         }
     }

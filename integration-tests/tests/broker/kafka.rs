@@ -34,6 +34,7 @@ async fn test_kafka_message_integrity() {
                     metrics: Default::default(),
                     tags: None,
                     details: Default::default(),
+                    error: None,
                 }],
                 created_at: None,
             };

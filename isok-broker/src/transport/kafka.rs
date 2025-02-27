@@ -49,7 +49,7 @@ impl TryFrom<KafkaConfig> for FutureProducer {
     fn try_from(value: KafkaConfig) -> Result<Self, Self::Error> {
         ClientConfig::from_iter(value.properties)
             .create()
-            .map_err(|e| TransportError::UnableToCreateProducer(e))
+            .map_err(TransportError::UnableToCreateProducer)
     }
 }
 
@@ -91,6 +91,7 @@ mod tests {
             metrics: Default::default(),
             tags: None,
             details: Default::default(),
+            error: None,
         }];
 
         let batch_thread = batch.clone();

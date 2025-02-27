@@ -59,7 +59,7 @@ impl BrokerTestingRunner<'static, DefaultProducerContext> {
         let config = BrokerConfig {
             transport: Transport::Kafka(kafka_config),
             api: ApiConfig {
-                listen_address: SocketAddr::new(Ipv4Addr::LOCALHOST.into(), port.clone()),
+                listen_address: SocketAddr::new(Ipv4Addr::LOCALHOST.into(), port),
             },
         };
         Self {
@@ -102,6 +102,12 @@ impl BrokerTestingRunner<'static, DefaultProducerContext> {
 
 pub struct AgentTestingRunner {
     config: AgentConfig,
+}
+
+impl Default for AgentTestingRunner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AgentTestingRunner {

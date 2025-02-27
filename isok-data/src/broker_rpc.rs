@@ -68,14 +68,10 @@ impl CheckResult {
         labels.push(warp10::Label::new("id", &self.id_ulid));
 
         if let Some(pretty_name) = &self.pretty_name {
-            labels.push(warp10::Label::new("pretty_name", &pretty_name));
+            labels.push(warp10::Label::new("pretty_name", pretty_name));
         }
 
-        labels.extend(
-            extra_labels
-                .into_iter()
-                .map(|(k, v)| warp10::Label::new(&k, &v)),
-        );
+        labels.extend(extra_labels.iter().map(|(k, v)| warp10::Label::new(k, v)));
         let time = match self.run_at {
             Some(run_at) => OffsetDateTime::from_unix_timestamp(run_at.seconds).unwrap(),
             None => OffsetDateTime::now_utc(),
@@ -186,6 +182,7 @@ mod tests {
             tags: None,
             details: Default::default(),
             pretty_name: Some("test".to_string()),
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
@@ -206,6 +203,7 @@ mod tests {
             }),
             details: Default::default(),
             pretty_name: Some("test".to_string()),
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
@@ -222,6 +220,7 @@ mod tests {
             tags: None,
             details: Some(Details::DetailsHttp(JobDetailsHttp { status_code: 200 })),
             pretty_name: Some("test".to_string()),
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
@@ -248,6 +247,7 @@ mod tests {
             metrics: Default::default(),
             tags: None,
             details: None,
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());

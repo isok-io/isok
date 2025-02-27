@@ -1,14 +1,18 @@
 use tokio::join;
 
-use crate::batch_sender::BatchSender;
-use crate::config::{Config, GetJobsRegistry};
-use crate::errors::{Error, Result};
-
 mod batch_sender;
+use self::batch_sender::BatchSender;
+
 pub mod config;
+use self::config::{Config, GetJobsRegistry};
+
 pub mod errors;
+use self::errors::{Error, Result};
+
 pub mod jobs;
+
 mod registry;
+
 mod state;
 
 pub async fn run(config: Config) -> Result<()> {
@@ -17,7 +21,7 @@ pub async fn run(config: Config) -> Result<()> {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let mut batch_sender = BatchSender::new(config.result_sender_adapter, rx)
         .await
-        .map_err(|e| Error::UnableToCreateBatchSender(e))?;
+        .map_err(Error::UnableToCreateBatchSender)?;
     join!(registry.execute(tx), batch_sender.run());
 
     Ok(())

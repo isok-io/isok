@@ -69,12 +69,17 @@ impl JobRegistry {
                 if job.next_run() > current_time {
                     continue;
                 }
-                let next_interval = current_time + job.interval();
-
                 tracing::debug!(job_name = ?job.key(), "Job execution");
-                job.set_next_run(next_interval);
-                job.execute(tx.clone()).await.unwrap();
+
+                let next_run = current_time + job.interval();
+                job.set_next_run(next_run);
+
+                if let Err(error) = job.execute(tx.clone()).await {
+                    // TODO: job should be dequeued
+                    tracing::error!("Job failed to execute: {error}");
+                }
             }
+
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
     }

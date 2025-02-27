@@ -17,7 +17,6 @@ service Broker {
   rpc Health(HealthRequest) returns (HealthResponse) {}
 }
 
-
 message CheckResult {
   string id_ulid = 1;
 
@@ -27,12 +26,14 @@ message CheckResult {
   CheckJobMetrics metrics = 4;
   Tags tags = 5;
 
+  optional string pretty_name = 6;
+  optional string error = 7;
+
   oneof details {
     JobDetailsTcp detail_tcp = 10;
     JobDetailsHttp details_http = 11;
+    JobDetailsHttps details_https = 12;
   }
-
-  optional string pretty_name = 12;
 }
 
 enum CheckJobStatus {
@@ -41,18 +42,22 @@ enum CheckJobStatus {
   Unreachable = 2;
   // Timeout is a special status that is used to indicate that a job has been
   // running for too long and has been killed. If this status is received, the
-  // offloader should consider the job as failed, as it reached system protections.
+  // offloader should consider the job as failed, as it reached system
+  // protections.
   Timeout = 3;
+  Unprocessable = 4;
 }
 
-message CheckJobMetrics {
-  optional uint64 latency = 1;
-}
+message CheckJobMetrics { optional uint64 latency = 1; }
 
 message JobDetailsTcp {}
 
-message JobDetailsHttp {
-  uint32 status_code = 1;
+message JobDetailsHttp { uint32 status_code = 1; }
+
+message JobDetailsHttps {
+    google.protobuf.Timestamp expired_after = 1;
+    google.protobuf.Timestamp not_active_before = 2;
+    bool is_valid = 3;
 }
 
 message Tags {
@@ -68,12 +73,8 @@ message CheckBatchRequest {
   repeated CheckResult events = 10;
 }
 
-message CheckBatchResponse {
-  optional string error = 1;
-}
+message CheckBatchResponse { optional string error = 1; }
 
 message HealthRequest {}
 
-message HealthResponse {
-  bool healthy = 1;
-}
+message HealthResponse { bool healthy = 1; }
