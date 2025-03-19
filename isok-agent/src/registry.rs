@@ -69,12 +69,21 @@ impl JobRegistry {
                 if job.next_run() > current_time {
                     continue;
                 }
-                let next_interval = current_time + job.interval();
 
-                tracing::debug!(job_name = ?job.key(), "Job execution");
-                job.set_next_run(next_interval);
-                job.execute(tx.clone()).await.unwrap();
+                let (job_name, job) = job.pair_mut();
+                let job_name = job_name.to_string();
+                let job_id = job.id();
+
+                tracing::debug!(job_name = ?job_name, "Job execution");
+
+                job.set_next_run(current_time + job.interval());
+
+                if let Err(error) = job.execute(tx.clone()).await {
+                    // TODO: job should be dequeued
+                    tracing::error!(job_name = ?job_name, job_id=?job_id, error = ?error, "Job failed to execute");
+                }
             }
+
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
     }

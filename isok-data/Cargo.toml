@@ -7,13 +7,13 @@ edition = "2021"
 prost = "0.13.4"
 tonic = "0.12.3"
 prost-types = "0.13.4"
-ulid = {  version = "1.1" , features = ["serde"] }
+ulid = { version = "1.1", features = ["serde"] }
 serde = { version = "1.0.216", features = ["derive"] }
 warp10 = { version = "2.0.0" }
 time = { version = "0.3.37" }
 
 [build-dependencies]
-tonic-build = {  version = "0.12.3", features = ["prost"] }
+tonic-build = { version = "0.12.3", features = ["prost"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

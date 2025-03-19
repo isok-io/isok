@@ -19,6 +19,10 @@ const GTS_LATENCY: &str = "latency";
 
 const GTS_HTTP_STATUS_CODE: &str = "http.status_code";
 
+const GTS_HTTPS_IS_VALID: &str = "https.is_valid";
+const GTS_HTTPS_EXPIRED_AFTER: &str = "https.expired_after";
+const GTS_HTTPS_NOT_ACTIVE_BEFORE: &str = "https.not_active_before";
+
 /// Represents the name of a Warp10 Series, it represents a combination
 /// of a prefix defined by global config or equal to [GTS_DEFAULT_PREFIX]
 /// and a suffix which is the name of the metric.
@@ -68,14 +72,10 @@ impl CheckResult {
         labels.push(warp10::Label::new("id", &self.id_ulid));
 
         if let Some(pretty_name) = &self.pretty_name {
-            labels.push(warp10::Label::new("pretty_name", &pretty_name));
+            labels.push(warp10::Label::new("pretty_name", pretty_name));
         }
 
-        labels.extend(
-            extra_labels
-                .into_iter()
-                .map(|(k, v)| warp10::Label::new(&k, &v)),
-        );
+        labels.extend(extra_labels.iter().map(|(k, v)| warp10::Label::new(k, v)));
         let time = match self.run_at {
             Some(run_at) => OffsetDateTime::from_unix_timestamp(run_at.seconds).unwrap(),
             None => OffsetDateTime::now_utc(),
@@ -141,6 +141,32 @@ impl Details {
                 let gts = GtsClassName::new(GTS_HTTP_STATUS_CODE);
                 vec![(gts, warp10::Value::from(http.status_code as i64))]
             }
+            Details::DetailsHttps(https) => {
+                vec![
+                    (
+                        GtsClassName::new(GTS_HTTPS_IS_VALID),
+                        warp10::Value::from(https.is_valid),
+                    ),
+                    (
+                        GtsClassName::new(GTS_HTTPS_EXPIRED_AFTER),
+                        warp10::Value::from(
+                            https
+                                .expired_after
+                                .map(|timestamp| timestamp.seconds)
+                                .unwrap_or(-1),
+                        ),
+                    ),
+                    (
+                        GtsClassName::new(GTS_HTTPS_NOT_ACTIVE_BEFORE),
+                        warp10::Value::from(
+                            https
+                                .not_active_before
+                                .map(|timestamp| timestamp.seconds)
+                                .unwrap_or(-1),
+                        ),
+                    ),
+                ]
+            }
             _ => Vec::new(),
         }
     }
@@ -186,6 +212,7 @@ mod tests {
             tags: None,
             details: Default::default(),
             pretty_name: Some("test".to_string()),
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
@@ -206,6 +233,7 @@ mod tests {
             }),
             details: Default::default(),
             pretty_name: Some("test".to_string()),
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
@@ -222,6 +250,7 @@ mod tests {
             tags: None,
             details: Some(Details::DetailsHttp(JobDetailsHttp { status_code: 200 })),
             pretty_name: Some("test".to_string()),
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
@@ -248,6 +277,7 @@ mod tests {
             metrics: Default::default(),
             tags: None,
             details: None,
+            error: None,
         };
 
         let metrics = result.warp10_serialize(&HashMap::new());
