@@ -1,0 +1,13 @@
+[package]
+name = "isok-agent"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+slab = { version = "0.4.9", default-features = false, features = ["std"] }
+uuid = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+reqwest = { workspace = true }
+rand = "0.9.1"
