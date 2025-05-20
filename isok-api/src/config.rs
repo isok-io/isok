@@ -1,7 +1,10 @@
+use biscuit_auth::{KeyPair, PrivateKey};
 use figment::error::Kind;
 use figment::providers::{Format, Toml};
 use figment::value::{Dict, Map, Tag, Value};
 use figment::{Error, Figment, Metadata, Profile, Provider};
+use isok_data::models::RefinementOps;
+use isok_data::models::U32InRange;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::net::SocketAddr;
@@ -22,10 +25,52 @@ pub struct DatabaseConfig {
 pub struct ApiConfig {
     #[serde(default = "default_api_addresses")]
     pub addresses: Vec<SocketAddr>,
+    pub argon2_params: Argon2Params,
+    #[serde(with = "private_key")]
+    pub private_key: PrivateKey,
 }
 
 fn default_api_addresses() -> Vec<SocketAddr> {
     vec!["127.0.0.1:8080".parse().unwrap()]
+}
+
+type MCost =
+    U32InRange<{ argon2::Params::MIN_M_COST as usize }, { argon2::Params::MAX_M_COST as usize }>;
+type TCost =
+    U32InRange<{ argon2::Params::MIN_T_COST as usize }, { argon2::Params::MAX_T_COST as usize }>;
+type PCost =
+    U32InRange<{ argon2::Params::MIN_P_COST as usize }, { argon2::Params::MAX_P_COST as usize }>;
+
+#[derive(Deserialize, Debug)]
+pub struct Argon2Params {
+    #[serde(default = "default_m_cost")]
+    pub m_cost: MCost,
+    #[serde(default = "default_t_cost")]
+    pub t_cost: TCost,
+    #[serde(default = "default_p_cost")]
+    pub p_cost: PCost,
+}
+
+impl Default for Argon2Params {
+    fn default() -> Self {
+        Self {
+            m_cost: default_m_cost(),
+            t_cost: default_t_cost(),
+            p_cost: default_p_cost(),
+        }
+    }
+}
+
+fn default_m_cost() -> MCost {
+    MCost::refine(argon2::Params::DEFAULT_M_COST).expect("DEFAULT_M_COST not in range")
+}
+
+fn default_t_cost() -> TCost {
+    TCost::refine(argon2::Params::DEFAULT_T_COST).expect("DEFAULT_T_COST not in range")
+}
+
+fn default_p_cost() -> PCost {
+    PCost::refine(argon2::Params::DEFAULT_P_COST).expect("DEFAULT_P_COST not in range")
 }
 
 impl Config {
@@ -44,6 +89,8 @@ impl Default for Config {
             },
             api: ApiConfig {
                 addresses: default_api_addresses(),
+                argon2_params: Default::default(),
+                private_key: KeyPair::new().private(),
             },
         }
     }
@@ -125,5 +172,18 @@ impl Provider for EnvAdapter {
             .into_iter()
             .map(|(profile, dict)| Ok((profile, Self::process_dict(dict, &self.suffix)?)))
             .collect()
+    }
+}
+
+mod private_key {
+    use biscuit_auth::PrivateKey;
+    use serde::{Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<PrivateKey, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        PrivateKey::from_bytes_hex(&s).map_err(serde::de::Error::custom)
     }
 }

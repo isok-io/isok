@@ -9,6 +9,12 @@ pub enum Error {
     Join(#[from] tokio::task::JoinError),
     #[error("database error: {0}")]
     Db(#[from] sqlx::Error),
+    #[error("argon2 error: {0}")]
+    PasswordHash(#[from] argon2::password_hash::Error),
+    #[error("wrong credentials")]
+    WrongCredentials,
+    #[error("biscuit error: {0}")]
+    Biscuit(#[from] biscuit_auth::error::Token),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

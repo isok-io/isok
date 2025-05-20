@@ -10,6 +10,7 @@ pub use organisation::*;
 pub use region::*;
 pub use user::*;
 
+pub use refined::RefinementOps;
 use refined::boundable::unsigned::ClosedInterval;
 use refined::string::Regex;
 use refined::{Refinement, TypeString, type_string};
