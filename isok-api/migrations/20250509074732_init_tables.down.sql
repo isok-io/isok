@@ -1,0 +1,14 @@
+drop table if exists checks_zones;
+drop table if exists checks;
+drop table if exists agents_tags;
+drop table if exists agents;
+drop table if exists zones_tags;
+drop table if exists zones;
+drop table if exists regions_tags;
+drop table if exists regions;
+drop table if exists organisations_tags;
+drop table if exists organisations_members;
+drop table if exists organisations;
+drop table if exists users_tags;
+drop table if exists users;
+drop table if exists tenants;
