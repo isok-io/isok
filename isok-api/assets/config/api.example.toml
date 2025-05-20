@@ -1,0 +1,5 @@
+[database]
+database_url_env = "DATABASE_URL"
+
+[api]
+addresses = ["127.0.0.1:8080"]
