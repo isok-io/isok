@@ -1,4 +1,5 @@
 mod organisations;
+mod regions;
 mod tenants;
 mod users;
 
