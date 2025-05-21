@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            select \"user\"\n            from organisations_members\n            where organisation = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5d88988a17bcb1fb49e23b87512cece66874e9071313ed4060c129a0d9e03964"
+}

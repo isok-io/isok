@@ -1350,6 +1350,7 @@ dependencies = [
  "clap",
  "figment",
  "isok-data",
+ "schemars",
  "serde",
  "sqlx",
  "thiserror 2.0.12",

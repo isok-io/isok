@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update organisations set name = $1 where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d2fd6e7f520c0b1908518d7aa8d7554c2a632c3480abcc3f7194c8c4bdfe445d"
+}
