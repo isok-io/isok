@@ -16,15 +16,17 @@ use aide::axum::routing::get_with;
 use aide::openapi::{Info, OpenApi, SecurityScheme};
 use axum::body::Body;
 use axum::extract::Request;
-use axum::http::Response;
 use axum::http::header::AUTHORIZATION;
+use axum::http::{HeaderValue, Response};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use biscuit_auth::{Authorizer, Biscuit, KeyPair};
+use std::result::Result as StdResult;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::watch::Receiver;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, trace};
 use uuid::Uuid;
@@ -152,6 +154,18 @@ pub async fn run(
         ..OpenApi::default()
     };
 
+    let cors = CorsLayer::very_permissive().allow_origin(if config.cors_origins.is_empty() {
+        AllowOrigin::mirror_request()
+    } else {
+        AllowOrigin::list(
+            config
+                .cors_origins
+                .into_iter()
+                .map(|o| HeaderValue::from_str(o.as_str()))
+                .collect::<StdResult<Vec<_>, _>>()?,
+        )
+    });
+
     let app = ApiRouter::new()
         .merge(public_routes(api_state.clone()))
         .merge(auth_routes(api_state.clone()))
@@ -167,6 +181,7 @@ pub async fn run(
             )
         })
         .layer(Extension(Arc::new(api)))
+        .layer(cors)
         .layer(TraceLayer::new_for_http());
 
     let listener = TcpListener::bind(config.addresses.as_slice()).await?;

@@ -25,6 +25,7 @@ pub struct DatabaseConfig {
 pub struct ApiConfig {
     #[serde(default = "default_api_addresses")]
     pub addresses: Vec<SocketAddr>,
+    pub cors_origins: Vec<String>,
     pub argon2_params: Argon2Params,
     #[serde(with = "private_key")]
     pub private_key: PrivateKey,
@@ -89,6 +90,7 @@ impl Default for Config {
             },
             api: ApiConfig {
                 addresses: default_api_addresses(),
+                cors_origins: vec![],
                 argon2_params: Default::default(),
                 private_key: KeyPair::new().private(),
             },

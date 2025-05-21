@@ -3,6 +3,7 @@ database_url_env = "DATABASE_URL"
 
 [api]
 addresses = ["127.0.0.1:8080"]
+cors_origins = [] # Empty means all origins
 private_key = "21cfeaaf8d49e3ac1104b82aabefa6c631de2c98f22b205a515fff3793418daa"
 
 [api.argon2_params]

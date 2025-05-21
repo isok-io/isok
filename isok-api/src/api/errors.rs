@@ -107,7 +107,8 @@ impl From<crate::errors::Error> for ApiError {
             | Error::Join(_)
             | Error::Db(_)
             | Error::PasswordHash(_)
-            | Error::Biscuit(_) => {
+            | Error::Biscuit(_)
+            | Error::CorsOrigins(_) => {
                 error!(?error);
                 Self::internal(&error.to_string())
             }

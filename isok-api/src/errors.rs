@@ -1,3 +1,4 @@
+use axum::http::header::InvalidHeaderValue;
 use thiserror::Error;
 use tokio::io;
 
@@ -15,6 +16,8 @@ pub enum Error {
     WrongCredentials,
     #[error("biscuit error: {0}")]
     Biscuit(#[from] biscuit_auth::error::Token),
+    #[error("failed to parse cors origins: {0}")]
+    CorsOrigins(#[from] InvalidHeaderValue),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
