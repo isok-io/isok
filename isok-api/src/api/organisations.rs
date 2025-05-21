@@ -1,7 +1,7 @@
-use crate::api::errors::{ApiError, ApiResult};
 use crate::api::ApiState;
-use aide::axum::routing::{delete_with, get_with, post_with};
+use crate::api::errors::{ApiError, ApiResult};
 use aide::axum::ApiRouter;
+use aide::axum::routing::{delete_with, get_with, post_with};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
