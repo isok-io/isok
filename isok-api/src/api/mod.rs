@@ -1,6 +1,7 @@
 mod auth;
 mod docs;
 mod errors;
+mod organisations;
 mod users;
 
 pub use crate::api::auth::Hasher;
@@ -102,6 +103,7 @@ fn public_routes(state: ApiState) -> ApiRouter {
 fn auth_routes(state: ApiState) -> ApiRouter {
     ApiRouter::new()
         .nest_api_service("/v1/users", users::router(state.clone()))
+        .nest_api_service("/v1/organisations", organisations::router(state.clone()))
         .layer(axum::middleware::from_fn(move |req, next| {
             auth_middleware(req, next, state.clone())
         }))
