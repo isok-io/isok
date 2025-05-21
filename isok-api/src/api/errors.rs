@@ -103,10 +103,15 @@ impl OperationOutput for ApiError {
 impl From<crate::errors::Error> for ApiError {
     fn from(error: crate::errors::Error) -> Self {
         match error {
-            Error::ApiInitialization(_) | Error::Join(_) | Error::Db(_) => {
+            Error::ApiInitialization(_)
+            | Error::Join(_)
+            | Error::Db(_)
+            | Error::PasswordHash(_)
+            | Error::Biscuit(_) => {
                 error!(?error);
                 Self::internal(&error.to_string())
             }
+            Error::WrongCredentials => Self::bad_request("Wrong credentials".to_string()),
         }
     }
 }

@@ -2,9 +2,11 @@ mod api;
 pub mod config;
 mod db;
 mod errors;
-use crate::api::ApiStateInner;
+
+use crate::api::{ApiStateInner, Hasher};
 use crate::config::Config;
 use crate::db::DbHandler;
+use biscuit_auth::KeyPair;
 use errors::Result;
 use std::sync::Arc;
 use tokio::task::JoinSet;
@@ -19,9 +21,20 @@ pub async fn run(config: Config) -> Result<()> {
     let mut tasks: JoinSet<Result<()>> = JoinSet::new();
     {
         let shutdown_rx = shutdown_rx;
+        let hasher = Hasher::new(&config.api.argon2_params);
+        let keypair = KeyPair::from(&config.api.private_key);
         let db = db_handler.clone();
         tasks.spawn(async {
-            api::run(config.api, Arc::new(ApiStateInner { _db: db }), shutdown_rx).await
+            api::run(
+                config.api,
+                Arc::new(ApiStateInner {
+                    db,
+                    hasher,
+                    keypair,
+                }),
+                shutdown_rx,
+            )
+            .await
         });
     }
 

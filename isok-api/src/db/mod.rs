@@ -1,3 +1,6 @@
+mod tenants;
+mod users;
+
 use crate::Result;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
