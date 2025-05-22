@@ -10,4 +10,8 @@ tokio = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 reqwest = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+isok-data = { workspace = true }
+chrono = { workspace = true }
 rand = "0.9.1"

@@ -10,7 +10,7 @@ use std::string::ToString;
 use std::time::Duration;
 use uuid::Uuid;
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Check {
     pub id: Uuid,
     pub interval: Duration,
@@ -18,12 +18,12 @@ pub struct Check {
     pub kind: CheckKind,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub enum CheckKind {
     Http(HttpCheck),
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub struct HttpCheck {
     #[serde(with = "http_serde::method")]
     #[schemars(with = "String")]
@@ -46,7 +46,7 @@ pub enum CheckStatus {
 
 #[derive(Serialize, JsonSchema)]
 pub struct CheckMetrics {
-    pub latency: u64,
+    pub latency: Duration,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -67,7 +67,7 @@ pub struct CheckResult {
     pub status: CheckStatus,
     pub metrics: CheckMetrics,
     pub error: Option<String>,
-    pub details: CheckResultDetails,
+    pub details: Option<CheckResultDetails>,
 }
 
 #[derive(Deserialize, JsonSchema)]

@@ -1,3 +1,4 @@
+use isok_data::models::CheckResult;
 use rand::Rng;
 use rand::seq::IteratorRandom;
 use slab::Slab;
@@ -11,7 +12,7 @@ use tokio::task::JoinHandle;
 use tokio::time;
 use uuid::Uuid;
 
-use crate::job::{Job, JobResult};
+use crate::job::Job;
 
 #[derive(Debug)]
 pub struct JobLocation {
@@ -131,18 +132,18 @@ pub struct Scheduler {
 
 impl Scheduler {
     pub fn new(interval: Duration) -> Self {
-        const INITINAL_ITER: usize = 1;
+        const INITIAL_ITER: usize = 1;
         Scheduler {
             interval,
-            jobs: Arc::new(RwLock::new(Vec::with_capacity(INITINAL_ITER))),
+            jobs: Arc::new(RwLock::new(Vec::with_capacity(INITIAL_ITER))),
             jobs_locations: HashMap::new(),
-            loop_interval_iter: Arc::new(RwLock::new((interval, INITINAL_ITER))),
+            loop_interval_iter: Arc::new(RwLock::new((interval, INITIAL_ITER))),
             insert_function: (SchedulerFunction::Divide).insert_function(),
         }
     }
 
     #[inline]
-    pub fn start(&mut self, snd: UnboundedSender<JobResult>) -> JoinHandle<()> {
+    pub fn start(&mut self, snd: UnboundedSender<CheckResult>) -> JoinHandle<()> {
         tokio::spawn(Self::job_loop(
             self.jobs.clone(),
             self.loop_interval_iter.clone(),
@@ -153,7 +154,7 @@ impl Scheduler {
     pub async fn job_loop(
         jobs: Arc<RwLock<Vec<Slab<Job>>>>,
         loop_interval_iter: Arc<RwLock<(Duration, usize)>>,
-        snd: UnboundedSender<JobResult>,
+        snd: UnboundedSender<CheckResult>,
     ) {
         loop {
             let (interval, iter) = *loop_interval_iter.read().await;
@@ -170,7 +171,7 @@ impl Scheduler {
     async fn launch_jobs(
         jobs: Arc<RwLock<Vec<Slab<Job>>>>,
         offset: usize,
-        snd: UnboundedSender<JobResult>,
+        snd: UnboundedSender<CheckResult>,
     ) {
         let jobs = jobs.read().await;
 
