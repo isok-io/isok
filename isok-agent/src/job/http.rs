@@ -1,16 +1,55 @@
-use reqwest::Method;
+use std::time::Duration;
+
+use chrono::Utc;
+use isok_data::models::{
+    CheckMetrics, CheckResult, CheckResultDetails, CheckStatus, HttpCheckResult,
+};
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::time::Instant;
-use tracing::info;
+use tokio::time::{Instant, timeout};
 use uuid::Uuid;
 
-use super::JobResult;
+#[derive(Clone)]
+pub struct HttpJob {
+    pub url: reqwest::Url,
+    pub method: reqwest::Method,
+}
 
-pub async fn execute_http(check_id: Uuid, url: String, snd: UnboundedSender<JobResult>) {
-    info!("Fetching url : {url}");
+pub async fn execute_http(check_id: Uuid, http_check: HttpJob, tx: UnboundedSender<CheckResult>) {
     let client = reqwest::Client::new();
+    let run_at = Utc::now();
     let before = Instant::now();
-    let _ = client.request(Method::GET, url).send().await.unwrap();
+    let response = timeout(
+        Duration::from_secs(1),
+        client.request(http_check.method, http_check.url).send(),
+    )
+    .await;
     let latency = before.elapsed();
-    snd.send(JobResult { check_id, latency });
+
+    let (status, error, details) = match response {
+        Ok(Ok(response)) => (
+            CheckStatus::Reachable,
+            None,
+            Some(CheckResultDetails::Http(HttpCheckResult {
+                status_code: response.status(),
+            })),
+        ),
+        Ok(Err(err)) => (
+            CheckStatus::Unknown,
+            Some(format!("internal error : {err}")),
+            None,
+        ),
+        Err(_elapsed) => (
+            CheckStatus::Timeout,
+            Some("request timed out".to_string()),
+            None,
+        ),
+    };
+    _ = tx.send(CheckResult {
+        id: check_id,
+        run_at,
+        metrics: CheckMetrics { latency },
+        status,
+        details,
+        error,
+    });
 }
