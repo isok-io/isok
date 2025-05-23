@@ -14,4 +14,5 @@ axum = { workspace = true }
 serde = { workspace = true }
 isok-data = { workspace = true }
 chrono = { workspace = true }
+tonic = { workspace = true }
 rand = "0.9.1"

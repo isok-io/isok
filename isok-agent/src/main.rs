@@ -5,6 +5,8 @@ mod state;
 
 use std::{collections::HashMap, net::IpAddr, sync::Arc};
 
+use isok_data::messages;
+use isok_data::messages::Message;
 use isok_data::models::{AgentInput, CheckResult};
 use reqwest::Url;
 
@@ -18,7 +20,12 @@ use tokio::{
         mpsc::{UnboundedReceiver, unbounded_channel},
     },
 };
+use tonic::codec::ProstCodec;
 use tracing::{error, info, warn};
+use uuid::Uuid;
+
+pub static mut AGENT_ID: Option<String> = None;
+pub static mut ZONE: Option<Uuid> = None;
 
 /// Get env var and parse it
 pub fn env_get<T>(env: &'static str) -> Option<T>
@@ -53,15 +60,33 @@ where
     }
 }
 
-async fn offload(mut rx: UnboundedReceiver<CheckResult>) {
+async fn offload(grpc_endpoint: String, mut rx: UnboundedReceiver<CheckResult>) {
+    let client = tonic::transport::Channel::from_shared(grpc_endpoint).unwrap();
+    let client = client.connect().await.unwrap();
+
+    let mut grpc = tonic::client::Grpc::new(client);
+
     loop {
-        while let Some(_r) = rx.recv().await {
-            // trust me, it works
+        while let Some(r) = rx.recv().await {
+            let mut buf = Vec::with_capacity(1024);
+            let req: messages::CheckResult = r.into();
+            _ = req.encode(&mut buf);
+
+            let req = tonic::Request::new(buf);
+            let codec: ProstCodec<Vec<u8>, ()> = tonic::codec::ProstCodec::default();
+
+            _ = grpc
+                .unary(
+                    req,
+                    "/".try_into().expect("this url should not fail"),
+                    codec,
+                )
+                .await;
         }
     }
 }
 
-async fn register_agent() {
+async fn register_agent(agent_id: String, zone: Uuid) {
     info!("Agent is registering");
     let api_url = match env_get::<Url>("API_URL") {
         Some(api_url) => api_url,
@@ -77,8 +102,7 @@ async fn register_agent() {
     };
 
     let api_token: String = env_get_mandatory("API_TOKEN");
-    let id = env_get_mandatory("AGENT_ID");
-    let zone = env_get_mandatory("AGENT_ZONE");
+
     let endpoint = env_get_mandatory("AGENT_ENDPOINT");
 
     let client = reqwest::Client::new();
@@ -86,7 +110,7 @@ async fn register_agent() {
         .post(api_url)
         .header("Authorization", format!("Bearer {api_token}"))
         .json(&AgentInput {
-            id,
+            id: agent_id,
             zone,
             endpoint,
             // TODO : put a real token here
@@ -112,11 +136,20 @@ async fn register_agent() {
 }
 
 async fn main_process() {
-    register_agent().await;
+    let agent_id: String = env_get_mandatory("AGENT_ID");
+    let zone: Uuid = env_get_mandatory("AGENT_ZONE");
+    unsafe {
+        AGENT_ID = Some(agent_id.clone());
+        ZONE = Some(zone.clone());
+    }
+
+    register_agent(agent_id, zone).await;
     info!("Agent has started!");
 
     let address = env_get("ADDRESS").unwrap_or(IpAddr::from([0, 0, 0, 0]));
     let port = env_get("PORT").unwrap_or(8080u16);
+
+    let grpc_endpoint: String = env_get_mandatory("BROKER_ADDRESS");
 
     let (snd, rx) = unbounded_channel();
     let api = api(Arc::new(RwLock::new(AgentState::new(snd))));
@@ -129,7 +162,7 @@ async fn main_process() {
     };
 
     tokio::select! {
-        _ = offload(rx) => {},
+        _ = offload(grpc_endpoint, rx) => {},
         _ = axum::serve(listener, api) => {}
     }
 }

@@ -51,5 +51,12 @@ pub async fn execute_http(check_id: Uuid, http_check: HttpJob, tx: UnboundedSend
         status,
         details,
         error,
+        zone: unsafe { crate::ZONE.expect("Should be here at this point") },
+        agent_id: unsafe {
+            #[allow(static_mut_refs)]
+            crate::AGENT_ID
+                .clone()
+                .expect("Should be here at this point")
+        },
     });
 }

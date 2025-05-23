@@ -52,6 +52,7 @@ chrono = { version = "0.4.41", default-features = false, features = [
 figment = { version = "0.10.19", features = ["toml"] }
 clap = { version = "4.5.38", features = ["derive", "env"] }
 schemars = { version = "0.8.22", features = ["uuid1", "chrono"] }
+tonic = "0.13.1"
 
 ## Local crates
 isok-data = { path = "./isok-data" }
