@@ -1,3 +1,5 @@
+use crate::models::EmailRegex;
+use crate::models::PasswordSchema;
 use crate::models::{Email, Password, Tags};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -5,9 +7,9 @@ use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct Creds {
-    #[schemars(with = "String")]
+    #[schemars(with = "EmailRegex")]
     pub email: Email,
-    #[schemars(with = "String")]
+    #[schemars(with = "PasswordSchema")]
     pub password: Password,
 }
 
@@ -15,9 +17,9 @@ pub type UserInput = Creds;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct PatchUser {
-    #[schemars(with = "Option<String>")]
+    #[schemars(with = "Option<EmailRegex>")]
     pub email: Option<Email>,
-    #[schemars(with = "Option<String>")]
+    #[schemars(with = "Option<PasswordSchema>")]
     pub password: Option<Password>,
 }
 

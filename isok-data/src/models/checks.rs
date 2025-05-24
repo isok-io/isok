@@ -1,7 +1,12 @@
 use crate::models::CheckName;
+use crate::models::DurationSchema;
+use crate::models::NameSchema;
+use crate::models::duration_secs;
 use chrono::{DateTime, Utc};
 use http::Method;
 use lazy_static::lazy_static;
+use refined::Refinement;
+use refined::boundable::unsigned::ClosedInterval;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -13,6 +18,8 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub struct Check {
     pub id: Uuid,
+    #[serde(with = "duration_secs")]
+    #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
     pub interval: Duration,
     pub kind: CheckKind,
 }
@@ -31,7 +38,7 @@ pub struct HttpCheck {
     #[schemars(with = "String")]
     pub url: http::Uri,
     #[serde(with = "http_serde::header_map")]
-    #[schemars(with = "String")]
+    #[schemars(with = "HashMap<String, String>")]
     pub headers: http::HeaderMap,
 }
 
@@ -45,6 +52,8 @@ pub enum CheckStatus {
 
 #[derive(Serialize, JsonSchema)]
 pub struct CheckMetrics {
+    #[serde(with = "duration_secs")]
+    #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
     pub latency: Duration,
 }
 
@@ -71,21 +80,24 @@ pub struct CheckResult {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ApiCheckInput {
-    pub interval: Duration,
-    #[schemars(with = "String")]
+    #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
+    pub interval: Refinement<u64, ClosedInterval<5, { 24 * 3600 }>>,
+    #[schemars(with = "NameSchema<1>")]
     pub name: CheckName,
     pub kind: CheckKind,
     pub zones: Vec<CheckZone>,
 }
 
+#[derive(Serialize, JsonSchema)]
 pub struct ApiCheck {
+    #[serde(flatten)]
     pub inner: Check,
     pub name: String,
     pub tenant: Uuid,
     pub zones: Vec<CheckZone>,
 }
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub enum CheckZone {
     All,
     Region(Uuid),
