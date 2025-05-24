@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from agents_tags where agent = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bfb81c0f7cb67c68b1e4a55f7c101584914f6fca7098f713faf519eb358435dd"
+}

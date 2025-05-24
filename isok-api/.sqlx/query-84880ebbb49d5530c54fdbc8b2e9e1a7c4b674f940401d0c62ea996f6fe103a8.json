@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, interval, name, tenant, kind as \"kind: Json<CheckKind>\" from checks where id in (select * from unnest($1::uuid[]))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "interval",
+        "type_info": "Interval"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tenant",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "kind: Json<CheckKind>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "84880ebbb49d5530c54fdbc8b2e9e1a7c4b674f940401d0c62ea996f6fe103a8"
+}

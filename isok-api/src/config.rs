@@ -9,11 +9,13 @@ use serde::Deserialize;
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::time::Duration;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub database: DatabaseConfig,
     pub api: ApiConfig,
+    pub agents_handler: AgentsHandlerConfig,
 }
 
 #[derive(Deserialize, Debug)]
@@ -26,6 +28,7 @@ pub struct ApiConfig {
     #[serde(default = "default_api_addresses")]
     pub addresses: Vec<SocketAddr>,
     pub cors_origins: Vec<String>,
+    pub agent_token: String,
     pub argon2_params: Argon2Params,
     #[serde(with = "private_key")]
     pub private_key: PrivateKey,
@@ -33,6 +36,13 @@ pub struct ApiConfig {
 
 fn default_api_addresses() -> Vec<SocketAddr> {
     vec!["127.0.0.1:8080".parse().unwrap()]
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AgentsHandlerConfig {
+    #[serde(with = "duration_secs")]
+    pub healthcheck_itv: Duration,
+    pub max_retries: u8,
 }
 
 type MCost =
@@ -91,8 +101,13 @@ impl Default for Config {
             api: ApiConfig {
                 addresses: default_api_addresses(),
                 cors_origins: vec![],
+                agent_token: "token".to_string(),
                 argon2_params: Default::default(),
                 private_key: KeyPair::new().private(),
+            },
+            agents_handler: AgentsHandlerConfig {
+                healthcheck_itv: Duration::from_secs(30),
+                max_retries: 3,
             },
         }
     }
@@ -187,5 +202,18 @@ mod private_key {
     {
         let s = String::deserialize(deserializer)?;
         PrivateKey::from_bytes_hex(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+mod duration_secs {
+    use serde::{Deserialize, Deserializer};
+    use std::time::Duration;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = u64::deserialize(deserializer)?;
+        Ok(Duration::from_secs(s))
     }
 }

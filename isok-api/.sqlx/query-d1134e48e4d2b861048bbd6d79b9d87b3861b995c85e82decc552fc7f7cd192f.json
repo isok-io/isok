@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into checks_zones (\"check\", kind, region, zone) values ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "checks_zone_kind",
+            "kind": {
+              "Enum": [
+                "all",
+                "region",
+                "zone"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d1134e48e4d2b861048bbd6d79b9d87b3861b995c85e82decc552fc7f7cd192f"
+}

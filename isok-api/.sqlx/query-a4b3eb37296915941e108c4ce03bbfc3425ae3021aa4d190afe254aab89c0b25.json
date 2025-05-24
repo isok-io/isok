@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from agents_checks where agent = $1 returning \"check\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "check",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a4b3eb37296915941e108c4ce03bbfc3425ae3021aa4d190afe254aab89c0b25"
+}

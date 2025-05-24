@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from agents_checks where agent = $1 and \"check\" in (select * from unnest($2::uuid[]))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b15ff6e25beda00a940eeec6604fccf486796c0e1a28f2fb2628daf78b473d1"
+}

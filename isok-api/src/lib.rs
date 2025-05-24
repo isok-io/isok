@@ -2,10 +2,12 @@ mod api;
 pub mod config;
 mod db;
 mod errors;
+mod services;
 
 use crate::api::{ApiStateInner, Hasher};
 use crate::config::Config;
 use crate::db::DbHandler;
+use crate::services::agents::AgentsHandler;
 use biscuit_auth::KeyPair;
 use errors::Result;
 use std::sync::Arc;
@@ -19,6 +21,12 @@ pub async fn run(config: Config) -> Result<()> {
     let db_handler = DbHandler::connect(&config.database.database_url).await?;
 
     let mut tasks: JoinSet<Result<()>> = JoinSet::new();
+    let agents_handler = AgentsHandler::new(
+        config.agents_handler,
+        db_handler.clone(),
+        &mut tasks,
+        shutdown_rx.clone(),
+    );
     {
         let shutdown_rx = shutdown_rx;
         let hasher = Hasher::new(&config.api.argon2_params);
@@ -29,6 +37,7 @@ pub async fn run(config: Config) -> Result<()> {
                 config.api,
                 Arc::new(ApiStateInner {
                     db,
+                    agents: agents_handler,
                     hasher,
                     keypair,
                 }),
