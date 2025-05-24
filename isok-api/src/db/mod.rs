@@ -1,3 +1,5 @@
+mod agents;
+mod checks;
 mod organisations;
 mod regions;
 mod tenants;

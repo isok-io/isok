@@ -18,6 +18,8 @@ pub enum Error {
     Biscuit(#[from] biscuit_auth::error::Token),
     #[error("failed to parse cors origins: {0}")]
     CorsOrigins(#[from] InvalidHeaderValue),
+    #[error("request error: {0}")]
+    Reqwest(#[from] reqwest::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

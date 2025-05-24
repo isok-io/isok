@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update agents set healthchecked_at = $1 where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e2eaedee5244fba46669e8acc0dbae5769dacde0e287f4ce8ef99be80a0f3bc0"
+}

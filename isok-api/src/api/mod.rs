@@ -1,3 +1,4 @@
+mod agents;
 mod auth;
 mod docs;
 mod errors;
@@ -10,6 +11,7 @@ use crate::api::errors::ApiError;
 use crate::config::ApiConfig;
 use crate::db::DbHandler;
 use crate::errors::Result;
+use crate::services::agents::AgentsHandler;
 use aide::Error;
 use aide::axum::ApiRouter;
 use aide::axum::routing::get_with;
@@ -33,6 +35,7 @@ use uuid::Uuid;
 
 pub(super) struct ApiStateInner {
     pub db: DbHandler,
+    pub agents: Arc<AgentsHandler>,
     pub hasher: Hasher,
     pub keypair: KeyPair,
 }
@@ -114,6 +117,13 @@ fn auth_routes(state: ApiState) -> ApiRouter {
         .with_path_items(|op| op.security_requirement("UserAuth"))
 }
 
+fn internal_routes(state: ApiState, config: &ApiConfig) -> ApiRouter {
+    ApiRouter::new().nest(
+        "/v1/agents",
+        agents::router(state, config.agent_token.clone()),
+    )
+}
+
 fn token_extract(request: &mut Request) -> Option<String> {
     request
         .headers()
@@ -160,7 +170,7 @@ pub async fn run(
         AllowOrigin::list(
             config
                 .cors_origins
-                .into_iter()
+                .iter()
                 .map(|o| HeaderValue::from_str(o.as_str()))
                 .collect::<StdResult<Vec<_>, _>>()?,
         )
@@ -169,6 +179,7 @@ pub async fn run(
     let app = ApiRouter::new()
         .merge(public_routes(api_state.clone()))
         .merge(auth_routes(api_state.clone()))
+        .merge(internal_routes(api_state, &config))
         .finish_api_with(&mut api, |api| {
             api.security_scheme(
                 "UserAuth",

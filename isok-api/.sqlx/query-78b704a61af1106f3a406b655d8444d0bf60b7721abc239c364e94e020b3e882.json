@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select \"check\", kind as \"kind: CheckZoneKind\", region, zone from checks_zones where \"check\" = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "check",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "kind: CheckZoneKind",
+        "type_info": {
+          "Custom": {
+            "name": "checks_zone_kind",
+            "kind": {
+              "Enum": [
+                "all",
+                "region",
+                "zone"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "region",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "zone",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "78b704a61af1106f3a406b655d8444d0bf60b7721abc239c364e94e020b3e882"
+}

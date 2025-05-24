@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, zone, endpoint, token, added_at, healthchecked_at from agents a\n               join agents_checks ac on a.id = ac.agent where ac.\"check\" = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "zone",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "endpoint",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "added_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "healthchecked_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2edca8b6aa7dc16a4db5627ab7e5e90a09e2f3d875730c7a944ef76c23c2cd2d"
+}

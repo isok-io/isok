@@ -1,10 +1,10 @@
-create table regions
+create table if not exists regions
 (
     id   uuid primary key,
     name text not null
 );
 
-create table regions_tags
+create table if not exists regions_tags
 (
     region uuid not null references regions,
     key    text not null,
@@ -19,7 +19,9 @@ create table if not exists zones
     region uuid references regions
 );
 
-create table zones_tags
+create index if not exists zones_region_idx on zones (region);
+
+create table if not exists zones_tags
 (
     zone  uuid not null references zones,
     key   text not null,
@@ -47,7 +49,7 @@ create table if not exists agents_tags
     primary key (agent, key)
 );
 
-create table tenants
+create table if not exists tenants
 (
     id uuid primary key
 );
@@ -61,7 +63,7 @@ create table if not exists users
 
 create index if not exists users_email_idx on users (email);
 
-create table users_tags
+create table if not exists users_tags
 (
     "user" uuid not null references users,
     key    text not null,
@@ -75,7 +77,7 @@ create table if not exists organisations
     name text not null
 );
 
-create table organisations_tags
+create table if not exists organisations_tags
 (
     organisation uuid not null references organisations,
     key          text not null,
@@ -90,18 +92,41 @@ create table if not exists organisations_members
     primary key (organisation, "user")
 );
 
-create table checks
+create table if not exists checks
 (
     id       uuid primary key,
     interval interval not null,
     name     text     not null,
-    tenant   uuid references tenants,
+    tenant   uuid     not null references tenants,
     kind     jsonb    not null
 );
 
-create table checks_zones
+do
+$$
+    begin
+        create type checks_zone_kind as enum ('all', 'region', 'zone');
+    exception
+        when duplicate_object then null;
+    end
+$$;
+
+create table if not exists checks_zones
 (
-    "check" uuid not null references checks,
-    zone    uuid not null references zones,
-    primary key ("check", zone)
+    "check" uuid references checks,
+    kind    checks_zone_kind not null,
+    region  uuid references regions,
+    zone    uuid references zones
 );
+
+create index if not exists checks_zones_check_idx on checks_zones ("check");
+create index if not exists checks_zones_region_idx on checks_zones (region);
+create index if not exists checks_zones_kind_idx on checks_zones (kind);
+
+create table if not exists agents_checks
+(
+    agent   text not null references agents,
+    "check" uuid not null references checks,
+    primary key (agent, "check")
+);
+
+create index if not exists agents_check_agent_idx on agents_checks (agent);

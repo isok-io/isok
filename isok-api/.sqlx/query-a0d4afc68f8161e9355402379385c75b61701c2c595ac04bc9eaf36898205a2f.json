@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select \"check\" from agents_checks where agent = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "check",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a0d4afc68f8161e9355402379385c75b61701c2c595ac04bc9eaf36898205a2f"
+}

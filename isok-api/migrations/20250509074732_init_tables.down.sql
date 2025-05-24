@@ -1,4 +1,6 @@
+drop table if exists agents_checks;
 drop table if exists checks_zones;
+drop type if exists checks_zones_kind;
 drop table if exists checks;
 drop table if exists agents_tags;
 drop table if exists agents;
