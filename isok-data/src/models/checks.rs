@@ -72,6 +72,8 @@ pub enum CheckResultDetails {
 
 pub struct CheckResult {
     pub id: Uuid,
+    pub zone: Uuid,
+    pub agent_id: String,
     pub run_at: DateTime<Utc>,
     pub status: CheckStatus,
     pub metrics: CheckMetrics,
