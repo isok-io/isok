@@ -1,5 +1,5 @@
 [workspace]
-members = ["isok-api", "isok-agent", "isok-data"]
+members = ["isok-api", "isok-agent", "isok-data", "isok-offloader"]
 resolver = "2"
 
 [workspace.dependencies]
