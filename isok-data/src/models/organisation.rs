@@ -1,3 +1,4 @@
+use crate::models::NameSchema;
 use crate::models::{OrgName, Tags, UserSimpleView};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -5,7 +6,7 @@ use uuid::Uuid;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrganisationInput {
-    #[schemars(with = "String")]
+    #[schemars(with = "NameSchema<0>")]
     pub name: OrgName,
 }
 

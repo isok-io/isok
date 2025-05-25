@@ -65,8 +65,8 @@ async fn auth_middleware(mut request: Request, next: Next, token: String) -> Res
 
 pub fn router(state: ApiState, token: String) -> ApiRouter {
     ApiRouter::new()
-        .route("/", post(add_agent).get(get_agents).delete(delete_agent))
-        .route("/{id}", get(get_agent))
+        .route("/", post(add_agent).get(get_agents))
+        .route("/{id}", get(get_agent).delete(delete_agent))
         .layer(axum::middleware::from_fn(move |req, next| {
             auth_middleware(req, next, token.clone())
         }))

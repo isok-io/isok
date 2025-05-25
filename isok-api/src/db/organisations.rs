@@ -173,4 +173,16 @@ impl DbHandler {
         tx.commit().await?;
         Ok(())
     }
+
+    pub async fn orgs_is_user_in(&self, org: Uuid, user: Uuid) -> Result<bool> {
+        let res = sqlx::query!(
+            r#"select 1 as a from organisations_members where organisation = $1 and "user" = $2"#,
+            org,
+            user
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(res.is_some())
+    }
 }

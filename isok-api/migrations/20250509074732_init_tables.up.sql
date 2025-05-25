@@ -112,7 +112,7 @@ $$;
 
 create table if not exists checks_zones
 (
-    "check" uuid references checks,
+    "check" uuid             not null references checks,
     kind    checks_zone_kind not null,
     region  uuid references regions,
     zone    uuid references zones

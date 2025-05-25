@@ -75,6 +75,36 @@ impl DbHandler {
         Ok(res)
     }
 
+    pub async fn checks_get_by_tenant(&self, tenant: Uuid) -> Result<Vec<ApiCheck>> {
+        let recs = sqlx::query!(
+            r#"select id, interval, name, tenant, kind as "kind: Json<CheckKind>" from checks where tenant = $1"#,
+            tenant
+        ).fetch_all(&self.pool).await?;
+
+        let mut res = Vec::with_capacity(recs.len());
+        for rec in recs {
+            let interval: Duration = Duration::from_micros(rec.interval.microseconds as u64)
+                .add(Duration::from_secs(rec.interval.days as u64 * 3600 * 24));
+            res.push(ApiCheck {
+                inner: Check {
+                    id: rec.id,
+                    interval,
+                    kind: rec.kind.0,
+                },
+                name: rec.name,
+                tenant: rec.tenant,
+                zones: self
+                    .checks_get_check_zones(rec.id)
+                    .await?
+                    .into_iter()
+                    .map(Into::into)
+                    .collect(),
+            });
+        }
+
+        Ok(res)
+    }
+
     async fn checks_insert_checks_zones(
         &self,
         check: Uuid,
@@ -138,5 +168,32 @@ impl DbHandler {
 
         tx.commit().await?;
         Ok(())
+    }
+
+    pub async fn checks_delete_by_id(&self, id: Uuid) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!(r#"delete from checks_zones where "check" = $1"#, id)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query!("delete from checks where id = $1", id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn checks_is_tenant(&self, check: Uuid, tenant: Uuid) -> Result<bool> {
+        let res = sqlx::query!(
+            r#"select 1 as a from isok.public.checks where id = $1 and tenant = $2"#,
+            check,
+            tenant
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(res.is_some())
     }
 }

@@ -1,7 +1,12 @@
 use crate::models::CheckName;
+use crate::models::DurationSchema;
+use crate::models::NameSchema;
+use crate::models::duration_secs;
 use chrono::{DateTime, Utc};
 use http::Method;
 use lazy_static::lazy_static;
+use refined::Refinement;
+use refined::boundable::unsigned::ClosedInterval;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -13,6 +18,8 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 pub struct Check {
     pub id: Uuid,
+    #[serde(with = "duration_secs")]
+    #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
     pub interval: Duration,
     pub kind: CheckKind,
 }
@@ -31,8 +38,9 @@ pub struct HttpCheck {
     #[schemars(with = "String")]
     pub url: http::Uri,
     #[serde(with = "http_serde::header_map")]
-    #[schemars(with = "String")]
+    #[schemars(with = "HashMap<String, String>")]
     pub headers: http::HeaderMap,
+    pub body: Option<String>,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -45,6 +53,8 @@ pub enum CheckStatus {
 
 #[derive(Serialize, JsonSchema)]
 pub struct CheckMetrics {
+    #[serde(with = "duration_secs")]
+    #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
     pub latency: Duration,
 }
 
@@ -71,39 +81,65 @@ pub struct CheckResult {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ApiCheckInput {
-    pub interval: Duration,
-    #[schemars(with = "String")]
+    #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
+    pub interval: Refinement<u64, ClosedInterval<5, { 24 * 3600 }>>,
+    #[schemars(with = "NameSchema<1>")]
     pub name: CheckName,
     pub kind: CheckKind,
     pub zones: Vec<CheckZone>,
 }
 
+#[derive(Serialize, JsonSchema)]
 pub struct ApiCheck {
+    #[serde(flatten)]
     pub inner: Check,
     pub name: String,
     pub tenant: Uuid,
     pub zones: Vec<CheckZone>,
 }
 
-#[derive(Deserialize, JsonSchema)]
+impl ApiCheck {
+    pub fn from_input(value: ApiCheckInput, id: Uuid, tenant: Uuid) -> Self {
+        Self {
+            inner: Check {
+                id,
+                interval: Duration::from_secs(*value.interval),
+                kind: value.kind,
+            },
+            name: value.name.to_string(),
+            tenant,
+            zones: value.zones,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub enum CheckZone {
     All,
     Region(Uuid),
     Zone(Uuid),
 }
 
-pub type ApiCheckMetrics = Vec<ApiCheckResult>;
+pub type ApiCheckMetrics = Vec<Option<ApiCheckResult>>;
 
-pub type ApiChecksSummary = HashMap<Uuid, ApiCheckResult>;
+pub type ApiChecksSummary = HashMap<Uuid, ApiCheckMetrics>;
 
 #[derive(Serialize, JsonSchema)]
 pub struct ApiCheckResult {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
-    pub status: CheckStatus,
+    pub status: ApiCheckStatus,
     pub metrics: CheckMetrics,
     pub error: Option<String>,
     pub details: CheckResultDetails,
+}
+
+#[derive(Serialize, JsonSchema)]
+pub enum ApiCheckStatus {
+    None,
+    Reachable,
+    Unreachable,
+    ReachableUnreachable,
 }
 
 lazy_static! {
@@ -159,7 +195,11 @@ lazy_static! {
                             label: Method::TRACE.to_string(),
                             value: Method::TRACE.to_string()
                         }
-                    ]
+                    ],
+                    default_value: Some(CheckSchemaSelectInputOption {
+                        label: Method::GET.to_string(),
+                        value: Method::GET.to_string()
+                    }),
                 }),
             },
             CheckSchemaInput {
@@ -174,7 +214,8 @@ lazy_static! {
                 title: "Headers".to_string(),
                 kind: CheckSchemaInputKind::KeyValue(CheckSchemaKeyValueInput {
                     key_placeholder: Some("Key".to_string()),
-                    value_placeholder: Some("Value".to_string())
+                    value_placeholder: Some("Value".to_string()),
+                    default_value: Default::default(),
                 })
             }
         ],
@@ -184,6 +225,7 @@ lazy_static! {
 #[derive(Serialize, JsonSchema)]
 pub struct CheckSchema {
     pub version: usize,
+    #[serde(rename = "type")]
     pub kind: CheckSchemaCheckKind,
     pub inputs: Vec<CheckSchemaInput>,
     pub inputs_advanced: Vec<CheckSchemaInput>,
@@ -226,6 +268,7 @@ pub enum CheckSchemaTextInputVariant {
 #[serde(rename_all = "camelCase")]
 pub struct CheckSchemaSelectInput {
     pub select_options: Vec<CheckSchemaSelectInputOption>,
+    pub default_value: Option<CheckSchemaSelectInputOption>,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -239,4 +282,5 @@ pub struct CheckSchemaSelectInputOption {
 pub struct CheckSchemaKeyValueInput {
     pub key_placeholder: Option<String>,
     pub value_placeholder: Option<String>,
+    pub default_value: HashMap<String, String>,
 }
