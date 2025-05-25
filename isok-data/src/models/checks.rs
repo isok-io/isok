@@ -40,6 +40,7 @@ pub struct HttpCheck {
     #[serde(with = "http_serde::header_map")]
     #[schemars(with = "HashMap<String, String>")]
     pub headers: http::HeaderMap,
+    pub body: Option<String>,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -97,6 +98,21 @@ pub struct ApiCheck {
     pub zones: Vec<CheckZone>,
 }
 
+impl ApiCheck {
+    pub fn from_input(value: ApiCheckInput, id: Uuid, tenant: Uuid) -> Self {
+        Self {
+            inner: Check {
+                id,
+                interval: Duration::from_secs(*value.interval),
+                kind: value.kind,
+            },
+            name: value.name.to_string(),
+            tenant,
+            zones: value.zones,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub enum CheckZone {
     All,
@@ -104,18 +120,26 @@ pub enum CheckZone {
     Zone(Uuid),
 }
 
-pub type ApiCheckMetrics = Vec<ApiCheckResult>;
+pub type ApiCheckMetrics = Vec<Option<ApiCheckResult>>;
 
-pub type ApiChecksSummary = HashMap<Uuid, ApiCheckResult>;
+pub type ApiChecksSummary = HashMap<Uuid, ApiCheckMetrics>;
 
 #[derive(Serialize, JsonSchema)]
 pub struct ApiCheckResult {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
-    pub status: CheckStatus,
+    pub status: ApiCheckStatus,
     pub metrics: CheckMetrics,
     pub error: Option<String>,
     pub details: CheckResultDetails,
+}
+
+#[derive(Serialize, JsonSchema)]
+pub enum ApiCheckStatus {
+    None,
+    Reachable,
+    Unreachable,
+    ReachableUnreachable,
 }
 
 lazy_static! {
@@ -171,7 +195,11 @@ lazy_static! {
                             label: Method::TRACE.to_string(),
                             value: Method::TRACE.to_string()
                         }
-                    ]
+                    ],
+                    default_value: Some(CheckSchemaSelectInputOption {
+                        label: Method::GET.to_string(),
+                        value: Method::GET.to_string()
+                    }),
                 }),
             },
             CheckSchemaInput {
@@ -186,7 +214,8 @@ lazy_static! {
                 title: "Headers".to_string(),
                 kind: CheckSchemaInputKind::KeyValue(CheckSchemaKeyValueInput {
                     key_placeholder: Some("Key".to_string()),
-                    value_placeholder: Some("Value".to_string())
+                    value_placeholder: Some("Value".to_string()),
+                    default_value: Default::default(),
                 })
             }
         ],
@@ -196,6 +225,7 @@ lazy_static! {
 #[derive(Serialize, JsonSchema)]
 pub struct CheckSchema {
     pub version: usize,
+    #[serde(rename = "type")]
     pub kind: CheckSchemaCheckKind,
     pub inputs: Vec<CheckSchemaInput>,
     pub inputs_advanced: Vec<CheckSchemaInput>,
@@ -238,6 +268,7 @@ pub enum CheckSchemaTextInputVariant {
 #[serde(rename_all = "camelCase")]
 pub struct CheckSchemaSelectInput {
     pub select_options: Vec<CheckSchemaSelectInputOption>,
+    pub default_value: Option<CheckSchemaSelectInputOption>,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -251,4 +282,5 @@ pub struct CheckSchemaSelectInputOption {
 pub struct CheckSchemaKeyValueInput {
     pub key_placeholder: Option<String>,
     pub value_placeholder: Option<String>,
+    pub default_value: HashMap<String, String>,
 }
