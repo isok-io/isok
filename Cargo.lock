@@ -1402,6 +1402,7 @@ name = "isok-data"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "figment",
  "http",
  "http-serde",
  "lazy_static",
