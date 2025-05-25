@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select 1 as a from organisations_members where organisation = $1 and \"user\" = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "a",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "76fb6b9188ca79eb70a953b49b0c43aa8c0bdb4eedca23f2fcb86fdb648448f4"
+}

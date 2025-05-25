@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from checks_zones where \"check\" = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b471b10e63f2e33a5115fa4a988bb040f21c8be7e44154eb83f86f5b03173b97"
+}

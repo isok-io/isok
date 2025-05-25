@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, interval, name, tenant, kind as \"kind: Json<CheckKind>\" from checks where tenant = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "interval",
+        "type_info": "Interval"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tenant",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "kind: Json<CheckKind>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "158a730320fbaf0aa9250bcb79115c2e7a5b0895120ac260b069d37c3a9e057c"
+}

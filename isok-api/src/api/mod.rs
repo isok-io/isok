@@ -1,5 +1,6 @@
 mod agents;
 mod auth;
+mod checks;
 mod docs;
 mod errors;
 mod organisations;
@@ -103,6 +104,7 @@ fn public_routes(state: ApiState) -> ApiRouter {
             ),
         )
         .nest_api_service("/v1", auth::router(state.clone()))
+        .nest_api_service("/v1/checks", checks::public_router())
         .nest("/docs", docs::router())
 }
 
@@ -110,6 +112,10 @@ fn auth_routes(state: ApiState) -> ApiRouter {
     ApiRouter::new()
         .nest_api_service("/v1/users", users::router(state.clone()))
         .nest_api_service("/v1/organisations", organisations::router(state.clone()))
+        .nest_api_service(
+            "/v1/checks/tenant/{tenant}",
+            checks::auth_router(state.clone()),
+        )
         .nest_api_service("/v1/regions", regions::router(state.clone()))
         .layer(axum::middleware::from_fn(move |req, next| {
             auth_middleware(req, next, state.clone())
