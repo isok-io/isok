@@ -43,7 +43,7 @@ pub struct HttpCheck {
     pub body: Option<String>,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub enum CheckStatus {
     Unknown,
     Reachable,
@@ -51,25 +51,26 @@ pub enum CheckStatus {
     Timeout,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub struct CheckMetrics {
     #[serde(with = "duration_secs")]
     #[schemars(with = "DurationSchema<5, { 24 * 3600 }>")]
     pub latency: Duration,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub struct HttpCheckResult {
     #[serde(with = "http_serde::status_code")]
     #[schemars(with = "u16")]
     pub status_code: http::StatusCode,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub enum CheckResultDetails {
     Http(HttpCheckResult),
 }
 
+#[derive(Debug)]
 pub struct CheckResult {
     pub id: Uuid,
     pub zone: Uuid,
