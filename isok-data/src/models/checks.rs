@@ -116,6 +116,7 @@ impl ApiCheck {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum CheckZone {
     All,
     Region(Uuid),

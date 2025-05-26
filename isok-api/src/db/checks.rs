@@ -187,7 +187,7 @@ impl DbHandler {
 
     pub async fn checks_is_tenant(&self, check: Uuid, tenant: Uuid) -> Result<bool> {
         let res = sqlx::query!(
-            r#"select 1 as a from isok.public.checks where id = $1 and tenant = $2"#,
+            r#"select 1 as a from checks where id = $1 and tenant = $2"#,
             check,
             tenant
         )
