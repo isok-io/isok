@@ -14,6 +14,7 @@ lazy_static = "1.5.0"
 refined = { version = "0.3.1", features = ["regex"] }
 prost = "0.13.5"
 prost-types = "0.13.5"
+tonic = { workspace = true }
 
 [build-dependencies]
 prost-build = "0.13.5"

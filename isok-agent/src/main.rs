@@ -68,12 +68,8 @@ async fn offload(grpc_endpoint: String, mut rx: UnboundedReceiver<CheckResult>) 
 
     loop {
         while let Some(r) = rx.recv().await {
-            let mut buf = Vec::with_capacity(1024);
-            let req: messages::CheckResult = r.into();
-            _ = req.encode(&mut buf);
-
-            let req = tonic::Request::new(buf);
-            let codec: ProstCodec<Vec<u8>, ()> = tonic::codec::ProstCodec::default();
+            let req = tonic::Request::new(r.into());
+            let codec: ProstCodec<messages::CheckResult, ()> = tonic::codec::ProstCodec::default();
 
             _ = grpc
                 .unary(
@@ -151,8 +147,8 @@ async fn main_process() {
 
     let grpc_endpoint: String = env_get_mandatory("BROKER_ADDRESS");
 
-    let (snd, rx) = unbounded_channel();
-    let api = api(Arc::new(RwLock::new(AgentState::new(snd))));
+    let (tx, rx) = unbounded_channel();
+    let api = api(Arc::new(RwLock::new(AgentState::new(tx))));
     let listener = match TcpListener::bind(std::net::SocketAddr::new(address, port)).await {
         Ok(l) => l,
         Err(err) => {

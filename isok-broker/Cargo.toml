@@ -1,0 +1,13 @@
+[package]
+name = "isok-broker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tonic = { workspace = true }
+isok-data = { workspace = true }
+rdkafka = { workspace = true }
+tower = "0.5.2"
