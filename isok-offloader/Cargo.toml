@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-isok-data = { workspace = true, features = ["config"] }
+isok-data = { workspace = true, features = ["config", "warp10"] }
 reqwest = { version = "0.12.9", features = ["json"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "signal"] }
 serde = { version = "1.0.216", features = ["derive"] }

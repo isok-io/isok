@@ -7,6 +7,8 @@ pub enum Error {
     Join(#[from] tokio::task::JoinError),
     #[error("kafka error: {0}")]
     Kafka(#[from] KafkaError),
+    #[error("warp10 error")]
+    Warp10,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -43,12 +43,13 @@ pub struct HttpCheck {
     pub body: Option<String>,
 }
 
-#[derive(Serialize, JsonSchema, Debug)]
+#[derive(Serialize, JsonSchema, Debug, Copy, Clone)]
+#[repr(i64)]
 pub enum CheckStatus {
-    Unknown,
-    Reachable,
-    Unreachable,
-    Timeout,
+    Unknown = 0,
+    Reachable = 1,
+    Unreachable = 2,
+    Timeout = 3,
 }
 
 #[derive(Serialize, JsonSchema, Debug)]
