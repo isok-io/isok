@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            with wregions as (select cz.\"check\" as id, z.id as zone\n                        from checks_zones cz\n                                 join zones z on cz.region = z.region),\n            wzones as (select cz.\"check\" as id, cz.zone as zone from checks_zones cz where kind = 'zone'),\n            wall as (select cz.\"check\" as id, z.id as zone\n                      from checks_zones cz\n                               join zones z on true\n                      where cz.kind = 'all'),\n            wcurrent as (select ac.\"check\" as id, a.zone as zone\n                        from agents_checks ac\n                                 join agents a on ac.agent = a.id)\n            (select id, zone from wregions union select id, zone from wzones union select id, zone from wall)\n            except select id, zone from wcurrent\n            where zone = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "zone",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "e1a3bb71f25d81a5d90e1d82c8d178d15404ae3e40f967f7395c0a4be11b31e6"
+}
