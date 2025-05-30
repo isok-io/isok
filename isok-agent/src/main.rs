@@ -3,14 +3,14 @@ mod job;
 mod scheduler;
 mod state;
 
-use std::{collections::HashMap, net::IpAddr, sync::Arc};
-
 use isok_data::messages;
-use isok_data::messages::Message;
 use isok_data::models::{AgentInput, CheckResult};
 use reqwest::Url;
+use std::time::Duration;
+use std::{collections::HashMap, net::IpAddr, sync::Arc};
 
 use api::api;
+use isok_data::messages::broker_client::BrokerClient;
 use state::AgentState;
 use tokio::{
     net::TcpListener,
@@ -20,7 +20,6 @@ use tokio::{
         mpsc::{UnboundedReceiver, unbounded_channel},
     },
 };
-use tonic::codec::ProstCodec;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -61,27 +60,37 @@ where
 }
 
 async fn offload(grpc_endpoint: String, mut rx: UnboundedReceiver<CheckResult>) {
-    let client = tonic::transport::Channel::from_shared(grpc_endpoint).unwrap();
-    let client = client.connect().await.unwrap();
-
-    let mut grpc = tonic::client::Grpc::new(client);
+    let Ok(client) = tonic::transport::Channel::from_shared(grpc_endpoint.clone()) else {
+        error!("Invalid grpc endpoint: {grpc_endpoint}");
+        std::process::exit(1);
+    };
+    let Ok(mut client) = BrokerClient::connect(client).await else {
+        error!("Failed to connect to broker");
+        std::process::exit(1);
+    };
 
     loop {
         while let Some(r) = rx.recv().await {
-            let mut buf = Vec::with_capacity(1024);
             let req: messages::CheckResult = r.into();
-            _ = req.encode(&mut buf);
-
-            let req = tonic::Request::new(buf);
-            let codec: ProstCodec<Vec<u8>, ()> = tonic::codec::ProstCodec::default();
-
-            _ = grpc
-                .unary(
-                    req,
-                    "/".try_into().expect("this url should not fail"),
-                    codec,
-                )
-                .await;
+            for i in 0..4 {
+                match client.send(req.clone()).await {
+                    Ok(_) => break,
+                    Err(error) => {
+                        if i == 3 {
+                            error!(?error, "Failed to send result to the broker");
+                            std::process::exit(1);
+                        }
+                        warn!(
+                            ?error,
+                            "Failed to send result to the broker, retrying in {} seconds",
+                            1 + i
+                        );
+                        let mut itv = tokio::time::interval(Duration::from_secs(1 + i));
+                        itv.tick().await;
+                        itv.tick().await;
+                    }
+                }
+            }
         }
     }
 }
