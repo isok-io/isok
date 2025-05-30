@@ -9,5 +9,5 @@ pub mod warp10;
 
 pub mod messages {
     pub use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/messages.rs"));
+    tonic::include_proto!("messages");
 }

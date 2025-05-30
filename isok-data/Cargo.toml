@@ -19,9 +19,10 @@ refined = { version = "0.3.1", features = ["regex"] }
 figment = { workspace = true, optional = true }
 prost = "0.13.5"
 prost-types = "0.13.5"
+tonic = { workspace = true }
 
 warp10 = { version = "2.0.0", optional = true }
 time = { version = "0.3.41", optional = true }
 
 [build-dependencies]
-prost-build = "0.13.5"
+tonic-build = { version = "0.13.1", features = ["prost"] }

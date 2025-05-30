@@ -1538,6 +1538,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "isok-broker"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "figment",
+ "isok-data",
+ "rdkafka",
+ "reqwest",
+ "serde",
+ "thiserror 2.0.12",
+ "tokio",
+ "tonic",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "isok-data"
 version = "0.1.0"
 dependencies = [
@@ -1547,12 +1564,13 @@ dependencies = [
  "http-serde",
  "lazy_static",
  "prost 0.13.5",
- "prost-build",
  "prost-types 0.13.5",
  "refined",
  "schemars",
  "serde",
  "time",
+ "tonic",
+ "tonic-build",
  "uuid",
  "warp10",
 ]
@@ -3386,6 +3404,20 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "tonic-build"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eac6f67be712d12f0b41328db3137e0d0757645d8904b4cb7d51cd9c2279e847"
+dependencies = [
+ "prettyplease",
+ "proc-macro2",
+ "prost-build",
+ "prost-types 0.13.5",
+ "quote",
+ "syn 2.0.101",
 ]
 
 [[package]]

@@ -1,0 +1,7 @@
+[kafka]
+topic = "isok.agent.results"
+[kafka.properties]
+"bootstrap.servers" = "127.0.0.1:9092"
+
+[api]
+listen_address = "127.0.0.1:9000"

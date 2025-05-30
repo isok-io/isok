@@ -2,38 +2,44 @@ syntax = "proto3";
 
 package messages;
 
+import "google/protobuf/empty.proto";
+
+service Broker {
+  rpc Send(CheckResult) returns (google.protobuf.Empty) {}
+}
+
 enum CheckStatus {
-    UNKNOWN = 0;
-    REACHABLE = 1;
-    UNREACHABLE = 2;
-    TIMEOUT = 3;
+  UNKNOWN = 0;
+  REACHABLE = 1;
+  UNREACHABLE = 2;
+  TIMEOUT = 3;
 }
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 message CheckMetrics {
-    google.protobuf.Duration latency = 1;
+  google.protobuf.Duration latency = 1;
 }
 
 message HttpCheckResult {
-    uint32 status_code = 1;
+  uint32 status_code = 1;
 }
 
 message CheckResultDetails {
-    oneof details {
-        HttpCheckResult http = 1;
-    }
+  oneof details {
+    HttpCheckResult http = 1;
+  }
 }
 
 message CheckResult {
-    string id = 1; 
-    string agent_id = 2; 
-    string zone = 3; 
-    google.protobuf.Timestamp run_at = 4;
-    CheckStatus status = 5;
-    CheckMetrics metrics = 6;
-    optional string error = 7; 
-    optional CheckResultDetails details = 8; 
+  string id = 1;
+  string agent_id = 2;
+  string zone = 3;
+  google.protobuf.Timestamp run_at = 4;
+  CheckStatus status = 5;
+  CheckMetrics metrics = 6;
+  optional string error = 7;
+  optional CheckResultDetails details = 8;
 }
 
