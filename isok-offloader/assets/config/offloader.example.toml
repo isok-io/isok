@@ -1,0 +1,12 @@
+[kafka]
+topic = "isok.agent.results"
+[kafka.properties]
+"bootstrap.servers" = "localhost:9092"
+"group.id" = "isok.offloader"
+"enable.auto.commit" = "true"
+"auto.commit.interval.ms" = "5000"
+"enable.auto.offset.store" = "false"
+"enable.partition.eof" = "false"
+
+[exporter]
+type = "stdout"
