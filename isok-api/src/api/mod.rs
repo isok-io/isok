@@ -13,6 +13,7 @@ use crate::config::ApiConfig;
 use crate::db::DbHandler;
 use crate::errors::Result;
 use crate::services::agents::AgentsHandler;
+use crate::services::warp10::Warp10;
 use aide::Error;
 use aide::axum::ApiRouter;
 use aide::axum::routing::get_with;
@@ -25,6 +26,7 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use biscuit_auth::{Authorizer, Biscuit, KeyPair};
+pub(crate) use checks::MetricsFilter;
 use std::result::Result as StdResult;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -39,6 +41,7 @@ pub(super) struct ApiStateInner {
     pub agents: Arc<AgentsHandler>,
     pub hasher: Hasher,
     pub keypair: KeyPair,
+    pub warp10: Warp10,
 }
 
 type ApiState = Arc<ApiStateInner>;

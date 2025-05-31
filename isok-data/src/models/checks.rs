@@ -52,6 +52,20 @@ pub enum CheckStatus {
     Timeout = 3,
 }
 
+impl TryFrom<i64> for CheckStatus {
+    type Error = ();
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Unknown),
+            1 => Ok(Self::Reachable),
+            2 => Ok(Self::Unreachable),
+            3 => Ok(Self::Timeout),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Serialize, JsonSchema, Debug)]
 pub struct CheckMetrics {
     #[serde(with = "duration_secs")]
@@ -129,22 +143,37 @@ pub type ApiCheckMetrics = Vec<Option<ApiCheckResult>>;
 
 pub type ApiChecksSummary = HashMap<Uuid, ApiCheckMetrics>;
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, Debug)]
 pub struct ApiCheckResult {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
     pub status: ApiCheckStatus,
-    pub metrics: CheckMetrics,
+    pub metrics: ApiCheckMetricsResult,
     pub error: Option<String>,
     pub details: CheckResultDetails,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, Debug)]
+pub struct ApiCheckMetricsResult {
+    pub latency: f32,
+}
+
+#[derive(Serialize, JsonSchema, Debug, Clone)]
 pub enum ApiCheckStatus {
     None,
     Reachable,
     Unreachable,
     ReachableUnreachable,
+}
+
+impl From<CheckStatus> for ApiCheckStatus {
+    fn from(value: CheckStatus) -> Self {
+        match value {
+            CheckStatus::Unknown => Self::None,
+            CheckStatus::Reachable => Self::Reachable,
+            CheckStatus::Unreachable | CheckStatus::Timeout => Self::Unreachable,
+        }
+    }
 }
 
 lazy_static! {

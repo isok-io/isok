@@ -20,6 +20,8 @@ pub enum Error {
     CorsOrigins(#[from] InvalidHeaderValue),
     #[error("request error: {0}")]
     Reqwest(#[from] reqwest::Error),
+    #[error("warp10 error: {0}")]
+    Warp10(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
