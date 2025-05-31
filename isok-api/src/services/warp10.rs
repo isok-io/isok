@@ -348,6 +348,17 @@ impl Warp10 {
             })
             .into_iter()
             .collect::<Vec<_>>();
+        if errors.is_empty() {
+            errors.append(
+                &mut Warp10Response {
+                    class: "".to_string(),
+                    labels: Default::default(),
+                    values: vec![],
+                }
+                .into_time_slot(filter)
+                .values,
+            )
+        }
         errors.sort_by(|(key, _), (key2, _)| key.cmp(key2));
 
         match kind {
