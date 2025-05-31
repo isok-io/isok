@@ -8,6 +8,7 @@ use crate::api::{ApiStateInner, Hasher};
 use crate::config::Config;
 use crate::db::DbHandler;
 use crate::services::agents::AgentsHandler;
+use crate::services::warp10::Warp10;
 use biscuit_auth::KeyPair;
 use errors::Result;
 use std::sync::Arc;
@@ -32,6 +33,7 @@ pub async fn run(config: Config) -> Result<()> {
         let hasher = Hasher::new(&config.api.argon2_params);
         let keypair = KeyPair::from(&config.api.private_key);
         let db = db_handler.clone();
+        let warp10 = Warp10::new(config.warp10);
         tasks.spawn(async {
             api::run(
                 config.api,
@@ -40,6 +42,7 @@ pub async fn run(config: Config) -> Result<()> {
                     agents: agents_handler,
                     hasher,
                     keypair,
+                    warp10,
                 }),
                 shutdown_rx,
             )

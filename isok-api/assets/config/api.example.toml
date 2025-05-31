@@ -15,3 +15,9 @@ private_key = "21cfeaaf8d49e3ac1104b82aabefa6c631de2c98f22b205a515fff3793418daa"
 [agents_handler]
 healthcheck_itv = 30
 max_retries = 3
+
+[warp10]
+read_token = "..."
+write_toke = "..."
+write_token = "..."
+endpoint = "http://localhost:8888"

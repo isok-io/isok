@@ -14,6 +14,7 @@ use isok_data::models::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 use sqlx::types::chrono::{DateTime, Utc};
+use std::collections::HashMap;
 use std::ops::Deref;
 use uuid::Uuid;
 
@@ -29,10 +30,10 @@ struct TenantCheckPath {
 }
 
 #[derive(Deserialize, JsonSchema)]
-struct MetricsFilter {
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-    points: usize,
+pub(crate) struct MetricsFilter {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub points: usize,
 }
 
 async fn get_meta() -> Json<Vec<&'static CheckSchema>> {
@@ -78,12 +79,27 @@ async fn get_check(
 }
 
 async fn get_check_metrics(
-    State(_state): State<ApiState>,
-    Extension(_me): Extension<User>,
-    Path(_path): Path<TenantCheckPath>,
+    State(state): State<ApiState>,
+    Path(path): Path<TenantCheckPath>,
     Query(filter): Query<MetricsFilter>,
 ) -> ApiResult<Json<ApiCheckMetrics>> {
-    Ok(Json((0..filter.points).map(|_| None).collect()))
+    let check = state
+        .db
+        .checks_get_by_ids(vec![path.check_id])
+        .await?
+        .into_iter()
+        .find(|c| c.tenant == path.tenant)
+        .ok_or(ApiError::not_found(format!(
+            "check {} not found",
+            path.check_id
+        )))?;
+
+    let res = state
+        .warp10
+        .get_check_results(check.inner.id, &check.inner.kind, &filter)
+        .await?;
+
+    Ok(Json(res))
 }
 
 async fn update_check(
@@ -106,6 +122,7 @@ async fn delete_check(
     Path(path): Path<TenantCheckPath>,
 ) -> ApiResult<StatusCode> {
     state.agents.remove_check(path.check_id).await?;
+    state.warp10.delete_results(path.check_id).await?;
     state.db.checks_delete_by_id(path.check_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -116,13 +133,17 @@ async fn get_summary(
     Path(path): Path<TenantPath>,
     Query(filter): Query<MetricsFilter>,
 ) -> ApiResult<Json<ApiChecksSummary>> {
-    let summary = state
-        .db
-        .checks_get_by_tenant(path.tenant)
-        .await?
-        .into_iter()
-        .map(|c| (c.inner.id, (0..filter.points).map(|_| None).collect()))
-        .collect();
+    let mut summary = HashMap::new();
+
+    for check in state.db.checks_get_by_tenant(path.tenant).await? {
+        summary.insert(
+            check.inner.id,
+            state
+                .warp10
+                .get_check_results(check.inner.id, &check.inner.kind, &filter)
+                .await?,
+        );
+    }
 
     Ok(Json(summary))
 }

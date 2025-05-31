@@ -1,3 +1,4 @@
+use axum::http::Uri;
 use biscuit_auth::{KeyPair, PrivateKey};
 use figment::providers::{Format, Toml};
 use figment::{Error, Figment};
@@ -14,6 +15,7 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub api: ApiConfig,
     pub agents_handler: AgentsHandlerConfig,
+    pub warp10: Warp10Config,
 }
 
 #[derive(Deserialize, Debug)]
@@ -82,6 +84,17 @@ fn default_p_cost() -> PCost {
     PCost::refine(argon2::Params::DEFAULT_P_COST).expect("DEFAULT_P_COST not in range")
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Warp10Config {
+    /// Valid Warp10 token that is used to read results
+    pub read_token: String,
+    /// Valid Warp10 token that is used to delete results
+    pub write_token: String,
+    /// Warp10 service to which the broker will read metrics, in the form of `http://<host>:<port>`
+    #[serde(with = "http_serde::uri")]
+    pub endpoint: Uri,
+}
+
 impl Config {
     pub fn from_file(path: impl Into<PathBuf>) -> Result<Self, Error> {
         Figment::new()
@@ -106,6 +119,11 @@ impl Default for Config {
             agents_handler: AgentsHandlerConfig {
                 healthcheck_itv: Duration::from_secs(30),
                 max_retries: 3,
+            },
+            warp10: Warp10Config {
+                read_token: "".to_string(),
+                write_token: "".to_string(),
+                endpoint: Default::default(),
             },
         }
     }
