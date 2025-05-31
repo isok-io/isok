@@ -208,19 +208,19 @@ impl DbHandler {
 
     pub async fn agents_get_incomplete_checks(&self) -> Result<Vec<Uuid>> {
         let res = sqlx::query!(r#"
-            with regions as (select cz."check" as id, z.id as zone
+            with wregions as (select cz."check" as id, z.id as zone
                         from checks_zones cz
                                  join zones z on cz.region = z.region),
-            zones as (select cz."check" as id, cz.zone as zone from checks_zones cz where kind = 'zone'),
-            "all" as (select cz."check" as id, z.id as zone
+            wzones as (select cz."check" as id, cz.zone as zone from checks_zones cz where kind = 'zone'),
+            wall as (select cz."check" as id, z.id as zone
                       from checks_zones cz
                                join zones z on true
                       where cz.kind = 'all'),
-            current as (select ac."check" as id, a.zone as zone
+            wcurrent as (select ac."check" as id, a.zone as zone
                         from agents_checks ac
                                  join agents a on ac.agent = a.id)
-            (select id, zone from regions union select id, zone from regions union select id, zone from "all")
-            except select id, zone from current"#)
+            (select id, zone from wregions union select id, zone from wzones union select id, zone from wall)
+            except select id, zone from wcurrent"#)
             .fetch_all(&self.pool)
             .await?
             .into_iter()
@@ -232,19 +232,19 @@ impl DbHandler {
 
     pub async fn agents_get_incomplete_checks_by_zone(&self, zone: Uuid) -> Result<Vec<Uuid>> {
         let res = sqlx::query!(r#"
-            with regions as (select cz."check" as id, z.id as zone
+            with wregions as (select cz."check" as id, z.id as zone
                         from checks_zones cz
                                  join zones z on cz.region = z.region),
-            zones as (select cz."check" as id, cz.zone as zone from checks_zones cz where kind = 'zone'),
-            "all" as (select cz."check" as id, z.id as zone
+            wzones as (select cz."check" as id, cz.zone as zone from checks_zones cz where kind = 'zone'),
+            wall as (select cz."check" as id, z.id as zone
                       from checks_zones cz
                                join zones z on true
                       where cz.kind = 'all'),
-            current as (select ac."check" as id, a.zone as zone
+            wcurrent as (select ac."check" as id, a.zone as zone
                         from agents_checks ac
                                  join agents a on ac.agent = a.id)
-            (select id, zone from regions union select id, zone from regions union select id, zone from "all")
-            except select id, zone from current
+            (select id, zone from wregions union select id, zone from wzones union select id, zone from wall)
+            except select id, zone from wcurrent
             where zone = $1"#, zone)
             .fetch_all(&self.pool)
             .await?
