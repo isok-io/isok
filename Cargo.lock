@@ -1524,6 +1524,7 @@ dependencies = [
  "biscuit-auth",
  "clap",
  "figment",
+ "http-serde",
  "isok-data",
  "reqwest",
  "schemars",

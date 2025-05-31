@@ -21,3 +21,4 @@ aide = { version = "0.14.2", features = ["axum", "axum-json", "axum-matched-path
 schemars = { workspace = true }
 biscuit-auth = "5.0.0"
 reqwest = { workspace = true }
+http-serde = { workspace = true }
