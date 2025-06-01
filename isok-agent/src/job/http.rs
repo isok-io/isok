@@ -34,7 +34,7 @@ pub async fn execute_http(check_id: Uuid, http_check: HttpJob, tx: UnboundedSend
             })),
         ),
         Ok(Err(err)) => (
-            CheckStatus::Unknown,
+            CheckStatus::Unreachable,
             Some(format!("internal error : {err}")),
             None,
         ),
